@@ -11,6 +11,8 @@ services:
         value: 3.12.14
       - key: OPENROUTER_API_KEY
         sync: false
+      - key: RAFEEQ_MODEL
+        value: openrouter/free
       - key: RAFEEQ_ACCESS_TOKEN
         sync: false
       - key: RAFEEQ_DB

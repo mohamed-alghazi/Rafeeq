@@ -231,7 +231,7 @@ async def evaluate(args, provider=None):
                         checks = grade_checks(task,result,state)
                         row.update(status='passed' if len(checks)>1 and all(checks.values()) else 'failed',stopped=result['stopped'],
                                    requests=result['requests'],tokens=result['tokens'],answer=result['answer'],checks=checks,
-                                   trace=result['trace'],state=state)
+                                   trace=result['trace'],state=state,served_models=result.get('served_models',[]))
                     except Exception as exc:
                         row.update(status='error',stopped=type(exc).__name__,answer='Runtime or provider error; no scored model outcome.')
                     row['seconds'] = round(time.monotonic()-started,3)

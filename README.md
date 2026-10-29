@@ -72,7 +72,7 @@ The command returns exit code 1 when a retrieval case mismatches, while still sa
 
 **Full-assistant evaluation is separate:** the 25-task prompt A/B suite checks generated answers, calculations, identity rules, pending actions and security. It remains at **0/25 executed per prompt setting**, because the OpenRouter key is unavailable. The local search scores do not satisfy that end-to-end execution requirement. [Full-assistant evaluation status](results/README.md).
 
-**68 automated application tests pass**, including real MCP integration, private-session boundaries, approvals and local-search access. These are not live model scores.
+**80 automated application tests pass**, including real MCP integration, private-session boundaries, approvals and local-search access. These are not live model scores.
 
 ## App preview
 

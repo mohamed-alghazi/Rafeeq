@@ -9,9 +9,10 @@ from datetime import timedelta
 from typing import Protocol
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAIError
 from rafeeq.store import Store
 from rafeeq.privacy import redact, redact_text
+from rafeeq.provider_errors import provider_settings, safe_failure
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_STEPS = 8
@@ -44,19 +45,24 @@ class Provider(Protocol):
 
 class OpenRouterProvider:
     def __init__(self):
-        native = os.getenv('RAFEEQ_PROVIDER', 'openrouter') == 'openai'
-        self.provider_name = 'openai' if native else 'openrouter'
-        key = os.getenv('OPENAI_API_KEY' if native else 'OPENROUTER_API_KEY')
+        self.provider_name, self.model, key_name = provider_settings()
+        key = os.getenv(key_name,'').strip()
         if not key: raise ValueError('Provider key is missing; configure it securely in the environment.')
-        self.client = AsyncOpenAI(api_key=key, base_url='https://api.openai.com/v1' if native else 'https://openrouter.ai/api/v1', timeout=45, max_retries=0)
-        self.model = os.getenv('RAFEEQ_MODEL', 'gpt-4.1-mini' if native else 'google/gemma-4-31b-it:free')
+        base = 'https://api.openai.com/v1' if self.provider_name=='openai' else 'https://openrouter.ai/api/v1'
+        self.client = AsyncOpenAI(api_key=key,base_url=base,timeout=45,max_retries=0)
 
     async def complete(self, messages, tools):
-        result = await self.client.chat.completions.create(model=self.model, messages=messages, tools=tools, max_tokens=MAX_OUTPUT_TOKENS, temperature=0)
-        msg = result.choices[0].message
-        return {'message': msg.model_dump(exclude_none=True),
-                'tokens': result.usage.total_tokens if result.usage else 0,
-                'finish_reason': result.choices[0].finish_reason}
+        try:
+            result = await self.client.chat.completions.create(model=self.model,messages=messages,tools=tools,max_tokens=MAX_OUTPUT_TOKENS,temperature=0)
+        except OpenAIError as exc:
+            raise safe_failure(exc) from None
+        if not result.choices:
+            from rafeeq.provider_errors import ProviderFailure
+            raise ProviderFailure('provider_empty_response','The AI provider returned no answer. Please try again later.',502)
+        choice = result.choices[0]
+        return {'message':choice.message.model_dump(exclude_none=True),
+                'tokens':result.usage.total_tokens if result.usage else 0,
+                'finish_reason':choice.finish_reason,'served_model':result.model}
 
     async def close(self):
         await self.client.close()
@@ -79,6 +85,7 @@ async def run_agent(prompt: str, store: Store, provider: Provider, config='B', h
         history = store.history(session_id)
     messages = [{'role': 'system', 'content': spec}, *trim_history(history or []), {'role': 'user', 'content': redact_text(prompt)}]
     trace, tokens, requests, reserved = [], 0, 0, 0.0
+    served_models = set()
     def scope():
         if not session_id: raise ValueError('Verify the applicant in the verification form first')
         return store.session(session_id, True)['owner']
@@ -88,7 +95,7 @@ async def run_agent(prompt: str, store: Store, provider: Provider, config='B', h
         current = store.session(session_id)['owner'] if session_id else None
         if session_id and stopped == 'complete': store.remember(session_id, prompt, answer)
         return {'answer': answer, 'stopped': stopped, 'trace': trace, 'requests': requests,
-                'tokens': tokens, 'reserved_usd': round(reserved, 4), 'pending': store.pending(current, session_id) if current else []}
+                'tokens': tokens, 'served_models': sorted(served_models), 'reserved_usd': round(reserved, 4), 'pending': store.pending(current, session_id) if current else []}
 
     async with AsyncExitStack() as stack:
         read, write = await stack.enter_async_context(stdio_client(StdioServerParameters(command=sys.executable, args=['-m', 'rafeeq.mcp_server'], cwd=str(ROOT))))
@@ -106,6 +113,7 @@ async def run_agent(prompt: str, store: Store, provider: Provider, config='B', h
             requests += 1
             result = await provider.complete(messages, tools)
             tokens += result.get('tokens', 0)
+            if result.get('served_model'): served_models.add(result['served_model'])
             if result.get('finish_reason', 'stop') not in {'stop', 'tool_calls'}:
                 return finish('The model reply was incomplete. No tools from this reply were executed.', 'incomplete_response')
             msg = result['message']

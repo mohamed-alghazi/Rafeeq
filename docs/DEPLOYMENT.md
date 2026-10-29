@@ -41,3 +41,24 @@ Before approving an action, review its application, date or calculated amount. L
 - Only public/synthetic information belongs in this demo. Prompts and selected tool results reach the external provider.
 
 A deployment is verified only after the actual hosted service starts and passes the representative fee, verification and approval checks. A committed configuration alone is not a deployed website.
+
+
+## AI chat errors
+
+In Render's Environment settings, set `RAFEEQ_MODEL=openrouter/free` for the free-router demo default. Keep the API key under `OPENROUTER_API_KEY`, and enter only the key value, without `Bearer`, quotes or a variable-name prefix. Save changes and redeploy the latest commit.
+
+`/health` reports whether a key is present, plus the selected provider and model. `provider_configured=true` does not prove that the provider accepts the key or has remaining quota.
+
+| Error code | Action |
+|---|---|
+| `provider_configuration_error` | Check the selected provider, key variable and model ID. |
+| `provider_key_rejected` | Replace the rejected provider key in Render's secret environment settings. |
+| `provider_credits_required` | Check the provider account balance and model pricing. |
+| `provider_access_denied` | Check key permissions, model access and provider restrictions. |
+| `provider_model_unavailable` | Select an available tool-capable model, or the free router for demo use. |
+| `provider_rate_limited` | Wait before retrying or check the provider's free quota. |
+| `provider_request_rejected` | Check model/tool compatibility and request settings. |
+| `provider_connection_failed` / `provider_timeout` | Check provider reachability or retry after an outage. |
+| `assistant_runtime_error` | Check Render logs for the safe error code and exception types; the failure is not necessarily from the provider. |
+
+Raw provider error bodies, keys and credentials are not returned or logged by the diagnostic handler. Local policy search remains available without inference.

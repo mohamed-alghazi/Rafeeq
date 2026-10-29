@@ -19,7 +19,7 @@ uv run --frozen uvicorn rafeeq.api:app --host 127.0.0.1 --port 8000
 uv run --frozen python -m rafeeq ask "What is the fee for a 3 m² illuminated sign?"
 ```
 
-The default provider is OpenRouter and the default model is `google/gemma-4-31b-it:free`. Set `RAFEEQ_MODEL` to another tool-capable model if availability changes. Optional OpenAI support uses `RAFEEQ_PROVIDER=openai`, `OPENAI_API_KEY` and an appropriate `RAFEEQ_MODEL`.
+The default provider is OpenRouter and the demo default is `openrouter/free`, which routes to an available free model. The serving model may vary. Set `RAFEEQ_MODEL` to another tool-capable model if availability changes. Optional OpenAI support uses `RAFEEQ_PROVIDER=openai`, `OPENAI_API_KEY` and an appropriate `RAFEEQ_MODEL`.
 
 ## Managed cloud setup
 
@@ -115,3 +115,10 @@ uv run --frozen python -m rafeeq.retrieval_eval --output .runtime/retrieval-chec
 The benchmark records top-1 correctness, hit-at-2, elapsed time, corpus/task/implementation hashes, dependency versions and the source commit. It uses no inference API. Its exit status is 1 if any task mismatches; this does not mean the benchmark failed to execute. The source set includes an abstention case and keeps all observed failures.
 
 The 26-query retrieval comparison is separate from the 25-task prompt A/B assistant evaluation. Replacing a pending assistant score with a local search score would misstate coverage.
+
+
+## Provider diagnostics and controlled model choice
+
+Provider errors are mapped to fixed public error codes. Nested MCP/task-group errors are unwrapped so authentication, quota, model availability, connectivity and internal service failures are not all reported as the same provider outage. Logs include only the safe code and exception type names, not raw provider bodies or credentials.
+
+For a controlled live prompt A/B comparison, pin `RAFEEQ_MODEL` to one specific available tool-capable model. The free router is useful for the demo, but its serving model can change across requests. Runs record observed serving-model IDs; routed runs cannot establish that an A/B difference was caused only by the prompt change.

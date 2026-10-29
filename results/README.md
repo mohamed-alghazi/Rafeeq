@@ -1,7 +1,7 @@
 # Full-assistant evaluation status
 
 No live model evaluations have been completed: `OPENROUTER_API_KEY` was unavailable during validation.
-The 68 passing automated tests validate application behavior and integration controls, not model answer quality.
+The 80 passing automated tests validate application behavior and integration controls, not model answer quality.
 
 | Configuration | Planned tasks | Completed live tasks | Pass rate |
 |---|---:|---:|---|
@@ -26,3 +26,5 @@ Passed, failed, error and pending statuses remain distinct. Runtime errors stop 
 Exit codes: **0** complete pass, **1** complete suite with scored failures, **2** incomplete execution or invalid setup. The evaluation runner requires Linux, macOS or WSL for advisory file locking.
 
 The separate local TF-IDF retrieval experiment has executed results in [evaluations/retrieval/results/REPORT.md](../evaluations/retrieval/results/REPORT.md). Those retrieval scores are not full-assistant scores.
+
+The demo defaults to `openrouter/free`. For a controlled live prompt A/B run, set `RAFEEQ_MODEL` to one specific available tool-capable model. A free router may serve different models across calls; serving-model IDs are recorded and that variation limits causal interpretation.
