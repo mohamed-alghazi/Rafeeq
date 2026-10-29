@@ -100,10 +100,6 @@ Verification uses a separate form, expires after 30 minutes and locks after thre
 
 The **lethal trifecta** is the combination of private records, untrusted instructions and an external destination. OpenRouter still receives the questions and tool results needed to answer, so this demo uses synthetic data only. [Security test details](docs/SECURITY.md).
 
-## Demo limits
-
-This is a learning project with fictional applications and no payment service. Appointment capacity and public holidays are not included. Sample data may reset between visits.
-
 ## Acknowledgements
 
 Thanks to SDAIA Academy and [Dr. Modar M. Alfadly](https://github.com/xmodar) for the practical examples connecting AI assistants, tools, evaluation and security.

@@ -10,7 +10,11 @@ The 84 passing automated tests validate application behavior and integration con
 
 ```bash
 uv run --frozen python -m rafeeq.evaluate tasks.jsonl --config A B --trials 1
-# Continue matching pending/error tasks without repeating scored outcomes:
+```
+
+Resume an interrupted run without repeating scored outcomes:
+
+```bash
 uv run --frozen python -m rafeeq.evaluate tasks.jsonl --config A B --trials 1 --resume
 ```
 

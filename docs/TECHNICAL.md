@@ -23,8 +23,6 @@ The default provider is OpenRouter and the demo default is `openrouter/free`, wh
 
 ## Managed cloud setup
 
-Use the existing checkout; do not create a Git worktree unless explicitly requested.
-
 ```bash
 cd /workspace/Rafeeq
 bash scripts/setup.sh
@@ -32,7 +30,7 @@ export UV_CACHE_DIR=/workspace/.uv-cache
 uv run --frozen uvicorn rafeeq.api:app --host 127.0.0.1 --port 8000
 ```
 
-The idempotent setup script installs locked dependencies and creates `.env` with a generated access token only if the file is absent. Supply the inference key through environment secrets. Installation and startup instructions are saved in the environment draft; saving instructions does not execute them or publish the environment. Running processes must be restarted in a new task.
+The setup script installs locked dependencies and creates `.env` with a generated private API access token only if the file is absent. The inference key is supplied through environment variables or the local `.env` file.
 
 `GET /health` reports service availability and credential presence, not provider authorization. A representative functional request should produce 750 SAR with `POL-02` for an illuminated 3 m² sign. Session-scoped requests send `X-Rafeeq-Session`. Private-session requests additionally use `Authorization: Bearer <local-access-token>`.
 

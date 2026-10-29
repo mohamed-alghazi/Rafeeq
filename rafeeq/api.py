@@ -139,7 +139,7 @@ async def chat(body: Ask, token=Depends(session_token)):
             finally:
                 await provider.close()
     except ValueError:
-        return JSONResponse(status_code=503,content={'error_code':'provider_configuration_error','detail':'AI chat is not configured correctly. The site owner should check the provider key and model settings. Local policy search needs no key.'})
+        return JSONResponse(status_code=503,content={'error_code':'provider_configuration_error','detail':'AI chat is temporarily unavailable. Policy search is still available.'})
     except TimeoutError:
         return JSONResponse(status_code=504,content={'error_code':'assistant_timeout','detail':'The request timed out. Check pending actions before trying again.'})
     except Exception as exc:
