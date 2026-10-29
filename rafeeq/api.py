@@ -48,7 +48,11 @@ def health():
 async def chat(body: Ask, owner=Depends(auth)):
     try:
         async with lock:
-            return await asyncio.wait_for(run_agent(body.message, store, OpenRouterProvider(), body.config, owner=owner), timeout=180)
+            provider = OpenRouterProvider()
+            try:
+                return await asyncio.wait_for(run_agent(body.message, store, provider, body.config, owner=owner), timeout=180)
+            finally:
+                await provider.close()
     except ValueError as exc: raise HTTPException(503, str(exc))
     except TimeoutError: raise HTTPException(504, 'Request timed out; inspect pending proposals before retrying')
     except Exception: raise HTTPException(502, 'Provider unavailable. Check key, quota and model; no credentials are logged.')

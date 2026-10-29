@@ -2,7 +2,8 @@ from __future__ import annotations
 import math
 import re
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -47,7 +48,9 @@ def search_policy(query: str) -> dict:
 
 
 def validate_date(value: str) -> str:
+    if not isinstance(value, str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', value):
+        raise ValueError('Use YYYY-MM-DD')
     chosen = date.fromisoformat(value)
-    if chosen <= date.today(): raise ValueError('Choose a future date')
+    if chosen <= datetime.now(ZoneInfo('Asia/Riyadh')).date(): raise ValueError('Choose a future date')
     if chosen.weekday() in {4, 5}: raise ValueError('Friday and Saturday are not working days')
     return chosen.isoformat()

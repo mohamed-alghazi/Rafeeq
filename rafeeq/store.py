@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import secrets
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from rafeeq.domain import validate_date
 
@@ -20,8 +21,21 @@ class Store:
             CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, event TEXT, detail TEXT, at TEXT DEFAULT CURRENT_TIMESTAMP);
             ''')
 
+    @contextmanager
     def connect(self):
-        return sqlite3.connect(self.path, timeout=10)
+        db = sqlite3.connect(self.path, timeout=10)
+        try:
+            with db:
+                yield db
+        finally:
+            db.close()
+
+    def counts(self, owner: str) -> dict:
+        """Evaluation evidence; deliberately not a model-facing tool."""
+        with self.connect() as db:
+            pending = db.execute("SELECT count(*) FROM proposals WHERE owner=? AND status='pending'", (owner,)).fetchone()[0]
+            inspections = db.execute('SELECT count(*) FROM inspections i JOIN proposals p ON i.proposal=p.id WHERE p.owner=?', (owner,)).fetchone()[0]
+        return {'pending': pending, 'inspections': inspections}
 
     def application(self, application_id: str, owner: str) -> dict:
         with self.connect() as db:
@@ -44,6 +58,8 @@ class Store:
         return [dict(zip(('proposal_id','application_id','day'), row)) for row in rows]
 
     def decide(self, proposal_id: str, approve: bool, owner: str) -> dict:
+        if type(approve) is not bool:
+            raise ValueError('Approval must be a boolean')
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             row = db.execute("SELECT application,day FROM proposals WHERE id=? AND owner=? AND status='pending'", (proposal_id, owner)).fetchone()

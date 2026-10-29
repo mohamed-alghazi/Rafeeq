@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 from contextlib import AsyncExitStack
+from datetime import timedelta
 from typing import Protocol
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -41,7 +42,12 @@ class OpenRouterProvider:
     async def complete(self, messages, tools):
         result = await self.client.chat.completions.create(model=self.model, messages=messages, tools=tools, max_tokens=MAX_OUTPUT_TOKENS, temperature=0)
         msg = result.choices[0].message
-        return {'message': msg.model_dump(exclude_none=True), 'tokens': result.usage.total_tokens if result.usage else 0}
+        return {'message': msg.model_dump(exclude_none=True),
+                'tokens': result.usage.total_tokens if result.usage else 0,
+                'finish_reason': result.choices[0].finish_reason}
+
+    async def close(self):
+        await self.client.close()
 
 
 def trim_history(history: list) -> list:
@@ -55,7 +61,7 @@ def trim_history(history: list) -> list:
 async def run_agent(prompt: str, store: Store, provider: Provider, config='B', history=None, owner='demo-user') -> dict:
     if config not in {'A', 'B'}: raise ValueError('Unknown configuration')
     spec = (ROOT / 'rafeeq/spec.md').read_text()
-    # One controlled difference: B forces evidence retrieval in the first model request.
+    # One controlled difference: B adds an evidence-retrieval instruction.
     if config == 'B': spec += '\nFor fee and policy questions, start by retrieving the relevant policy before computing or answering.'
     messages = [{'role': 'system', 'content': spec}, *trim_history(history or []), {'role': 'user', 'content': prompt}]
     trace, tokens, requests, reserved = [], 0, 0, 0.0
@@ -65,7 +71,7 @@ async def run_agent(prompt: str, store: Store, provider: Provider, config='B', h
 
     async with AsyncExitStack() as stack:
         read, write = await stack.enter_async_context(stdio_client(StdioServerParameters(command=sys.executable, args=['-m', 'rafeeq.mcp_server'], cwd=str(ROOT))))
-        mcp = await stack.enter_async_context(ClientSession(read, write))
+        mcp = await stack.enter_async_context(ClientSession(read, write, read_timeout_seconds=timedelta(seconds=20)))
         await mcp.initialize()
         remote = (await mcp.list_tools()).tools
         tools = LOCAL_TOOLS + [{'type': 'function', 'function': {'name': t.name, 'description': t.description or '', 'parameters': t.inputSchema}} for t in remote]
@@ -79,26 +85,40 @@ async def run_agent(prompt: str, store: Store, provider: Provider, config='B', h
             requests += 1
             result = await provider.complete(messages, tools)
             tokens += result.get('tokens', 0)
+            if result.get('finish_reason', 'stop') not in {'stop', 'tool_calls'}:
+                return finish('The model reply was incomplete. No tools from this reply were executed.', 'incomplete_response')
             msg = result['message']
             calls = msg.get('tool_calls') or []
             if not calls:
-                return {'answer': msg.get('content') or '', 'stopped': 'complete', 'trace': trace, 'requests': requests, 'tokens': tokens, 'reserved_usd': round(reserved, 4), 'pending': store.pending(owner)}
+                answer = msg.get('content') or ''
+                return finish(answer, 'complete' if answer.strip() else 'empty_response')
             if len(trace) + len(calls) > MAX_CALLS:
                 return finish('Tool-call budget reached.', 'tool_budget')
             messages.append(msg)
             for call in calls:
                 name = call['function']['name']
+                args = {}
+                ok = False
                 try:
                     args = json.loads(call['function']['arguments'])
                     if name in remote_names:
                         response = await mcp.call_tool(name, args)
-                        output = {'error': 'MCP tool rejected input'} if response.isError else {'content': [c.text for c in response.content if hasattr(c, 'text')]}
-                    elif name == 'get_application': output = store.application(owner=owner, **args)
-                    elif name == 'propose_inspection': output = store.propose(owner=owner, **args)
+                        ok = not response.isError
+                        output = {'error': 'MCP tool rejected input'} if not ok else response.structuredContent
+                        if ok and output is None:
+                            content = [c.text for c in response.content if hasattr(c, 'text')]
+                            try: output = json.loads(content[0]) if len(content) == 1 else {'content': content}
+                            except ValueError: output = {'content': content}
+                    elif name == 'get_application':
+                        output = store.application(owner=owner, **args)
+                        ok = True
+                    elif name == 'propose_inspection':
+                        output = store.propose(owner=owner, **args)
+                        ok = True
                     else: output = {'error': 'Tool not allowed'}
                 except (ValueError, TypeError):
                     output = {'error': 'Invalid arguments or application unavailable'}
                 text = json.dumps(output, ensure_ascii=False)[:5000]
-                trace.append({'tool': name, 'result': text})
+                trace.append({'tool': name, 'arguments': args, 'ok': ok, 'result': text})
                 messages.append({'role': 'tool', 'tool_call_id': call['id'], 'content': text})
     return finish('Step budget reached.', 'step_budget')
