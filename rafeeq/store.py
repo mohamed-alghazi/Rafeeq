@@ -45,6 +45,7 @@ class Store:
                                  ('submitted', "TEXT DEFAULT '2026-09-01'"), ('duplicate_paid', 'REAL DEFAULT 0')],
                 'proposals': [('kind', "TEXT DEFAULT 'inspection'"), ('payload', "TEXT DEFAULT '{}'"), ('session', 'TEXT')],
                 'inspections': [('version', 'INTEGER DEFAULT 0')],
+                'sessions': [('public', 'INTEGER DEFAULT 0')],
             }
             for table, columns in additions.items():
                 existing = {r[1] for r in db.execute(f'PRAGMA table_info({table})')}
@@ -78,19 +79,19 @@ class Store:
     def _session_key(token):
         return hashlib.sha256(token.encode()).hexdigest()
 
-    def create_session(self) -> str:
+    def create_session(self, public=False) -> str:
         token = secrets.token_urlsafe(32)
         with self.connect() as db:
-            db.execute('INSERT INTO sessions(id,expires) VALUES (?,?)', (self._session_key(token), time.time() + 8 * 3600))
+            db.execute('INSERT INTO sessions(id,expires,public) VALUES (?,?,?)', (self._session_key(token), time.time() + 8 * 3600, int(public)))
         return token
 
     def session(self, token: str, require_verified=False) -> dict:
         with self.connect() as db:
-            row = db.execute('SELECT owner,failed,verified_until,expires FROM sessions WHERE id=?', (self._session_key(token),)).fetchone()
+            row = db.execute('SELECT owner,failed,verified_until,expires,public FROM sessions WHERE id=?', (self._session_key(token),)).fetchone()
         if not row or row[3] <= time.time(): raise ValueError('Session expired or unavailable')
         owner = row[0] if row[2] > time.time() and row[1] < 3 else None
         if require_verified and not owner: raise ValueError('Verify the applicant in the verification form first')
-        return {'owner': owner, 'verified': bool(owner), 'locked': row[1] >= 3, 'failed_attempts': row[1], 'reverification_required': bool(row[0] and not owner)}
+        return {'owner': owner, 'verified': bool(owner), 'locked': row[1] >= 3, 'failed_attempts': row[1], 'reverification_required': bool(row[0] and not owner), 'public': bool(row[4])}
 
     def verify(self, token: str, application_id: str, last4: str, mobile: str) -> dict:
         self.session(token)

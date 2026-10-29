@@ -2,7 +2,7 @@
 
 [Project overview](../README.md)
 
-`render.yaml` prepares this repository for a free Render web service. A hosting account is required. AI chat needs an inference key; public local policy search does not. No public service has been deployed from this workspace.
+`render.yaml` prepares this repository for a free Render web service. A hosting account is required. AI chat needs an inference key; public local policy search does not. Public demo URL: https://rafeeq-demo-pcbf.onrender.com/. Visitors use [the visitor guide](USER_GUIDE.md); the setup steps below are for hosting the service.
 
 ## Render setup
 
@@ -12,12 +12,14 @@
 4. Review the selected plan and deploy. The included configuration selects the free plan, without paid persistent storage.
 5. When the service is live, use the HTTPS address displayed by Render. Check `/health`, then test a real chat request before sharing it.
 
-A tester needs the site address and the **site access code** (`RAFEEQ_ACCESS_TOKEN`). The OpenRouter API key stays on Render and is never shared with testers.
+Visitors click **Start demo** and do not need a code, account or API key. Anonymous sessions are created by `POST /api/visitors`. The optional `RAFEEQ_ACCESS_TOKEN` remains private and protects the separate private-session API. Keep it, the OpenRouter key and hosting-account credentials out of visitor instructions. No additional per-visitor or daily quotas are imposed by this application; the inference provider's own availability and limits still apply.
+
+Visitor-facing instructions: [USER_GUIDE.md](USER_GUIDE.md).
 
 ## Tester flow
 
-1. Open the service and enter the site access code to start an isolated session.
-2. The public policy-search button works without an access code or inference key. AI chat requires the site access code and a configured provider key; public questions do not require applicant verification.
+1. Open the service and click **Start demo** to start an isolated visitor session.
+2. The public policy-search button works without an access code or inference key. AI chat uses the provider key configured on the server; public questions do not require applicant verification.
 3. For application actions, use the separate verification form. The intentionally public synthetic applicant is:
 
 | Field | Synthetic value |
@@ -36,7 +38,7 @@ Before approving an action, review its application, date or calculated amount. L
 
 - Free Render storage is temporary. `/tmp/rafeeq-demo.sqlite` can disappear after a restart or redeploy; sessions, actions and history can reset. It is unsuitable for real records.
 - Free services can sleep when inactive. The first request may take longer.
-- The shared access code is an invitation gate for a synthetic demo, not separate production user accounts. Verification lockout is per session.
+- Visitors use anonymous session tokens, not production user accounts. Verification lockout is per session. Private-session tokens still require the private API access code.
 - Set an appropriate spending limit on the provider account. Local spending reservations are estimates, and each chat turn can make several inference requests.
 - Only public/synthetic information belongs in this demo. Prompts and selected tool results reach the external provider.
 

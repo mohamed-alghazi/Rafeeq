@@ -30,16 +30,17 @@ async def invalid_request(request, exc):
 
 
 def auth(authorization: str = Header(default='')):
-    token = os.getenv('RAFEEQ_ACCESS_TOKEN', '')
-    if not token: raise HTTPException(503, 'Set RAFEEQ_ACCESS_TOKEN before using the service')
-    if not secrets.compare_digest(authorization, f'Bearer {token}'):
-        raise HTTPException(401, 'Invalid access token')
+    token = os.getenv('RAFEEQ_ACCESS_TOKEN','')
+    if not token: raise HTTPException(503,'Private API access has not been configured')
+    if not secrets.compare_digest(authorization.encode(),f'Bearer {token}'.encode()):
+        raise HTTPException(401,'Invalid access code')
 
 
-def session_token(x_rafeeq_session: str = Header(default=''), _=Depends(auth)):
-    if not x_rafeeq_session or len(x_rafeeq_session) > 100: raise HTTPException(401, 'Create a session first')
-    try: store.session(x_rafeeq_session)
-    except ValueError: raise HTTPException(401, 'Session expired or unavailable')
+def session_token(x_rafeeq_session: str = Header(default=''), authorization: str = Header(default='')):
+    if not x_rafeeq_session or len(x_rafeeq_session)>100: raise HTTPException(401,'Start a demo session first')
+    try: state = store.session(x_rafeeq_session)
+    except ValueError: raise HTTPException(401,'Session expired or unavailable')
+    if not state['public']: auth(authorization)
     return x_rafeeq_session
 
 
@@ -85,7 +86,7 @@ def health():
     except ValueError:
         provider, model, configured, valid = None, None, False, False
     return {'status':'ok','synthetic':True,'provider':provider,'model':model,'configuration_valid':valid,
-            'provider_configured':configured,'access_configured':bool(os.getenv('RAFEEQ_ACCESS_TOKEN'))}
+            'provider_configured':configured,'access_configured':bool(os.getenv('RAFEEQ_ACCESS_TOKEN')),'guest_access':True}
 
 
 @app.post('/api/policies/search')
@@ -93,6 +94,11 @@ def search_public_policies(body: PolicySearch):
     from rafeeq.retrieval import policy_search
     try: return {'mode':body.mode,'local':True,'documents':policy_search(body.query,body.mode)}
     except ValueError as exc: raise HTTPException(422,str(exc))
+
+
+@app.post('/api/visitors')
+def create_visitor_session():
+    return {'session_token':store.create_session(public=True)}
 
 
 @app.post('/api/sessions')

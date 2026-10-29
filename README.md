@@ -8,6 +8,27 @@ Built for [Advanced Agentic AI Systems Engineering - SDAIA Academy](https://gith
 - **Team:** Individual
 - **Data:** Synthetic Madar records only
 
+![Rafeeq showing real local policy-search results](docs/images/policy-search.png)
+
+## Getting started
+
+[Open Rafeeq](https://rafeeq-demo-pcbf.onrender.com/) and click **Start demo**. No account, access code or API key is required from visitors.
+
+1. Start a new demo session and ask a question, such as “What is the fee for a 3 m² illuminated sign?”
+2. For a direct policy lookup, use **Search policies**. This runs locally without an AI-provider request.
+3. To check an application or prepare an action, complete the verification form using the synthetic details below. Do not enter real personal information.
+4. Review any pending action and choose **Approve** or **Reject**. Preparing a request does not execute it.
+
+| Demo verification field | Value |
+|---|---|
+| Application | `MDR-1001` |
+| Last four ID digits | `0001` |
+| Mobile | `0550001001` |
+
+Each visitor has a separate conversation and pending approvals. Sample application records are shared fictional data. A visitor session does not provide access to the owner's hosting account, private API sessions or provider key.
+
+[Visitor guide and example requests](docs/USER_GUIDE.md)
+
 ## Features
 
 - Answers policy questions and calculates fees with a source reference.
@@ -31,18 +52,6 @@ Built for [Advanced Agentic AI Systems Engineering - SDAIA Academy](https://gith
 | `propose_escalation` | Prepares a request about an overdue application | No |
 
 A prepared request waits for the user's approval. Refunds above **1,000 SAR** also wait for a finance officer. All actions stay inside the demo; no money is paid and no email is sent.
-
-## Getting started
-
-The app requires Python 3.11+ and [uv](https://docs.astral.sh/uv/). **Public policy search works without an API key.** AI chat requires an OpenRouter key and a site access code. The [setup guide](docs/TECHNICAL.md#local-setup) covers both modes.
-
-After setup, start the app with:
-
-```bash
-uv run --frozen uvicorn rafeeq.api:app --host 127.0.0.1 --port 8000
-```
-
-The policy-search button runs locally and supports search modes A and B. To use AI chat, enter the site access code. Application details and actions also require the separate verification form. [Demo account and public hosting instructions](docs/DEPLOYMENT.md).
 
 ## Local search evaluation
 
@@ -72,13 +81,7 @@ The command returns exit code 1 when a retrieval case mismatches, while still sa
 
 **Full-assistant evaluation is separate:** the 25-task prompt A/B suite checks generated answers, calculations, identity rules, pending actions and security. It remains at **0/25 executed per prompt setting**, because the OpenRouter key is unavailable. The local search scores do not satisfy that end-to-end execution requirement. [Full-assistant evaluation status](results/README.md).
 
-**80 automated application tests pass**, including real MCP integration, private-session boundaries, approvals and local-search access. These are not live model scores.
-
-## App preview
-
-A real browser capture after a local policy search. No AI response was mocked or generated for this screenshot.
-
-![Rafeeq showing real local policy-search results](docs/images/policy-search.png)
+**84 automated application tests pass**, including real MCP integration, private-session boundaries, approvals and local-search access. These are not live model scores.
 
 ## Security: the risk and the protection
 
@@ -103,6 +106,6 @@ This is a learning project with made-up identities, local action records and no 
 
 ## Acknowledgements
 
-Thanks to SDAIA Academy and the course instructor for the practical examples connecting AI assistants, tools, evaluation and security.
+Thanks to SDAIA Academy and [Dr. Modar M. Alfadly](https://github.com/xmodar) for the practical examples connecting AI assistants, tools, evaluation and security.
 
-[Course requirements](https://github.com/SDAIAAcademy/agentic-ai/tree/main/labs/capstone) · [Synthetic data sources](data/ATTRIBUTION.md) · [Tests](tests/)
+[Course requirements](https://github.com/SDAIAAcademy/agentic-ai/tree/main/labs/capstone) · [Synthetic data sources](data/ATTRIBUTION.md) · [Tests](tests/) · [Local setup](docs/TECHNICAL.md#local-setup)

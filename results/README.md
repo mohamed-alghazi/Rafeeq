@@ -1,7 +1,7 @@
 # Full-assistant evaluation status
 
 No live model evaluations have been completed: `OPENROUTER_API_KEY` was unavailable during validation.
-The 80 passing automated tests validate application behavior and integration controls, not model answer quality.
+The 84 passing automated tests validate application behavior and integration controls, not model answer quality.
 
 | Configuration | Planned tasks | Completed live tasks | Pass rate |
 |---|---:|---:|---|

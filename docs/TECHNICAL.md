@@ -11,8 +11,8 @@ uv sync --frozen
 cp -n .env.example .env
 ```
 
-Preserve an existing `.env`. Set `OPENROUTER_API_KEY` and a long, randomly generated `RAFEEQ_ACCESS_TOKEN` in that file; never commit it.
-The API key authenticates requests to the inference provider. The access token protects the local application's chat and approval endpoints.
+Preserve an existing `.env`. Set `OPENROUTER_API_KEY` in that file. `RAFEEQ_ACCESS_TOKEN` is optional private API access and is not needed by browser visitors. Never commit real keys or access codes.
+The API key authenticates requests to the inference provider. The private access token protects private-session API calls. Public visitors receive an independent random session token without a password.
 
 ```bash
 uv run --frozen uvicorn rafeeq.api:app --host 127.0.0.1 --port 8000
@@ -34,7 +34,7 @@ uv run --frozen uvicorn rafeeq.api:app --host 127.0.0.1 --port 8000
 
 The idempotent setup script installs locked dependencies and creates `.env` with a generated access token only if the file is absent. Supply the inference key through environment secrets. Installation and startup instructions are saved in the environment draft; saving instructions does not execute them or publish the environment. Running processes must be restarted in a new task.
 
-`GET /health` reports service availability and credential presence, not provider authorization. A representative functional request should produce 750 SAR with `POL-02` for an illuminated 3 m² sign. Protected requests use `Authorization: Bearer <local-access-token>`.
+`GET /health` reports service availability and credential presence, not provider authorization. A representative functional request should produce 750 SAR with `POL-02` for an illuminated 3 m² sign. Session-scoped requests send `X-Rafeeq-Session`. Private-session requests additionally use `Authorization: Bearer <local-access-token>`.
 
 ## Engineering decisions
 
@@ -84,14 +84,14 @@ Missing credentials create no result files. Exit codes are 0 for a complete pass
 
 ## Data and deployment limits
 
-All supplied records are synthetic. Questions and relevant tool results are transmitted to OpenRouter and its serving provider. The demo includes two synthetic applicant identities. A shared site access code starts isolated sessions; a separate verification endpoint checks the application, last four ID digits and registered mobile. Verification expires after 30 minutes; three failed attempts lock the session. Session tokens are hashed in storage and identity fields use salted PBKDF2 hashes. This is not a production identity system. Runtime SQLite files and `.env` are excluded from Git. The audit table stores proposal/decision identifiers without conversation transcripts or credentials.
+All supplied records are synthetic. Questions and relevant tool results are transmitted to OpenRouter and its serving provider. The demo includes two synthetic applicant identities. A public start button creates isolated visitor sessions; a separate verification endpoint checks the application, last four ID digits and registered mobile. Verification expires after 30 minutes; three failed attempts lock the session. Session tokens are hashed in storage and identity fields use salted PBKDF2 hashes. This is not a production identity system. Runtime SQLite files and `.env` are excluded from Git. The audit table stores proposal/decision identifiers without conversation transcripts or credentials.
 
 Production deployment requires independent user authentication, data-protection controls, provider suitability review, rate limiting and real scheduling integration.
 
 
 ## Applicant sessions and actions
 
-`POST /api/sessions` requires the site access code and returns an opaque session token. Subsequent calls send it in `X-Rafeeq-Session`. `POST /api/session/verify` accepts application ID, `last4` and mobile outside the model. Private tool calls recheck verification at execution time. A session cannot switch to a different applicant identity.
+`POST /api/visitors` creates an anonymous visitor session without a code. `POST /api/sessions` remains a separate private API requiring the private access code. Both return opaque session tokens; subsequent calls send them in `X-Rafeeq-Session`. A private session cannot be used without its additional access code, while visitor sessions use their own token capability. There is no application-level visitor turn/day quota. `POST /api/session/verify` accepts application ID, `last4` and mobile outside the model. Private tool calls recheck verification at execution time. A session cannot switch to a different applicant identity.
 
 `GET /api/history` returns only the current session's redacted turns; `DELETE /api/history` clears them. Expired verification hides earlier private history until reverification. Common Saudi mobile/identity patterns, email, IBAN and credential strings are masked before model input, storage and traces. Pattern matching is a minimisation control, not a complete detector for all sensitive information.
 

@@ -37,7 +37,7 @@ These tests use temporary databases, synthetic records and controlled provider r
 
 The `injection`, `other-status` and `scope` cases are included in `tasks.jsonl`. Their live A/B outcomes are pending until a usable OpenRouter key is available. No undefended live control was run, so there is no measured before/after leak rate.
 
-This is a synthetic multi-session demo with two fixture applicant identities and a shared site access code. Production use requires independent accounts, storage protection, provider-processing review and operational controls. A successful handler test is evidence for that boundary, not a claim that the whole system is secure.
+This is a synthetic multi-session demo with two fixture applicant identities and anonymous visitor sessions. Production use requires independent accounts, storage protection, provider-processing review and operational controls. A successful handler test is evidence for that boundary, not a claim that the whole system is secure.
 
 
 ## Additional session and privacy coverage
@@ -47,3 +47,5 @@ This is a synthetic multi-session demo with two fixture applicant identities and
 Verification credentials are entered outside chat and stored as salted hashes. Conversation memory contains bounded redacted text, not raw verification fields or tool transcripts. Session-token hashes scope memory and action approvals. The shared code and public demo fixture credentials are not production authentication. Redaction is pattern-based and cannot guarantee removal of every possible sensitive detail.
 
 The public `/api/policies/search` endpoint serves only the fixed synthetic policy corpus. Its mode and query length are validated. Tests verify that it creates no inference client and grants no access to private application/proposal endpoints.
+
+`tests/test_visitor_access.py` covers no-password visitor creation, protection of private sessions, cross-visitor memory/approval isolation and the absence of a site-password field. Sessions use unguessable tokens; there are no additional application-level usage quotas. Existing per-run execution budgets and verification rules remain enforced.
