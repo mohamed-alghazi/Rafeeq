@@ -1,99 +1,90 @@
 # رفيق | Rafeeq
 
-A municipal-services assistant for the fictional city of Madar. It explains fees, checks application status and prepares inspection requests for human approval. All records are synthetic.
+**Rafeeq is an AI assistant that helps users check applications, calculate fees and request municipal services.** It can prepare inspections, change appointments, request refunds and escalate delays. Users review and approve every action before it is recorded.
 
-Built for [Advanced Agentic AI Systems Engineering - SDAIA Academy](https://github.com/sdaiaacademy/agentic-ai/), Track 1: **Rafeeq in production**.
+Built for [Advanced Agentic AI Systems Engineering - SDAIA Academy](https://github.com/sdaiaacademy/agentic-ai/), Track 1: Rafeeq in production. Madar is a fictional municipality; all records and demo identity details are synthetic.
 
 ## Features
 
-- Policy retrieval with source references and programmatic fee calculation.
-- Application lookup restricted to the current applicant.
-- Inspection proposals with a separate approval step before booking.
-- A bounded agent loop with context, tool-call and estimated spending limits.
-- **18 evaluation tasks**, two configurations and **4 tools**, including two over MCP.
+- Policy-based answers and fee calculation with source references.
+- Applicant verification using the registered mobile and last four ID digits, outside the AI conversation.
+- Inspection booking, rescheduling, refunds and overdue-application escalation, with human approval.
+- Separate conversations for each session, with bounded history and sensitive-data redaction.
+- **8 tools**, including two over MCP, and **25 evaluation tasks** on configurations A and B.
+- Resumable evaluation tied to the code, policies, tasks, model and locked dependencies.
 
 ## Tools
 
-| Tool | Purpose | MCP | Human approval |
-|---|---|---|---|
-| `search_policy` | Retrieve relevant policy documents | Yes | No |
-| `calculate_fee` | Compute fees using the published synthetic schedule | Yes | No |
-| `get_application` | Read an application owned by the current applicant | No | No |
-| `propose_inspection` | Create a pending inspection proposal | No | Required before booking |
+| Tool | Purpose | MCP |
+|---|---|---|
+| `search_policy` | Find relevant policies | Yes |
+| `calculate_fee` | Calculate fees | Yes |
+| `get_application` | Check a verified applicant's application | No |
+| `list_inspections` | List the applicant's inspection dates | No |
+| `propose_inspection` | Prepare a booking | No |
+| `propose_reschedule` | Prepare an appointment change | No |
+| `propose_refund` | Calculate and prepare a refund request | No |
+| `propose_escalation` | Prepare escalation of an overdue application | No |
 
-For example, a 3 m² illuminated sign costs **750 SAR**: 600 SAR base fee plus a 150 SAR surcharge, according to `POL-02`.
+The four proposal tools never execute their actions directly. Refunds above 1,000 SAR await finance review after user approval. The demo never pays money or sends email.
 
-## Stack and setup
+## Run locally
 
-Python 3.11+, FastAPI, SQLite, HTML/JavaScript, OpenRouter and MCP. The default model is `google/gemma-4-31b-it:free`, following the course labs; live model quality has not been measured yet.
+Requirements: Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --frozen
 cp -n .env.example .env
 ```
 
-Set `OPENROUTER_API_KEY` and a long, random `RAFEEQ_ACCESS_TOKEN` in `.env`. Preserve an existing `.env` when updating. The API key stays server-side; `.env` is excluded from Git.
+Set `OPENROUTER_API_KEY` and a long, random `RAFEEQ_ACCESS_TOKEN` in `.env`, then start the service:
 
 ```bash
 uv run --frozen uvicorn rafeeq.api:app --host 127.0.0.1 --port 8000
 ```
 
-The browser interface uses `RAFEEQ_ACCESS_TOKEN` for access. [Technical guide and cloud setup](docs/TECHNICAL.md).
+Enter the access code in the browser to start a session. The verification form accepts the public synthetic fixture: application `MDR-1001`, ID suffix `0001`, mobile `0550001001`. Credentials are entered in that form, not in chat. A 3 m² illuminated sign should cost **750 SAR** under `POL-02`.
 
-## Evaluation
+[Technical guide](docs/TECHNICAL.md) · [Share a hosted demo](docs/DEPLOYMENT.md)
 
-The [suite](tasks.jsonl) contains **18 tasks**, exceeding the course minimum of 15: fees, retrieval, application lookup, security, approval and clarification.
+## Tests and evaluation
 
-**A:** base instructions. **B:** the same setup with an additional instruction to retrieve policies before fee or policy answers. Tools, model and security controls remain the same.
-
-| Configuration | Planned tasks | Live evaluations completed | Pass rate |
-|---|---:|---:|---|
-| A | 18 | 0 | Not measured |
-| B | 18 | 0 | Not measured |
-
-**35 automated tests pass.** These test application behavior and security controls, not live model quality. OpenRouter credentials were unavailable during validation; the live A/B evaluation is still pending.
+**60 automated tests pass.** They cover identity checks, memory isolation, refunds, rescheduling, escalation, approval, privacy, real MCP integration and evaluation recovery. These are application tests, not live model scores.
 
 ```bash
 uv run --frozen pytest -q
 uv run --frozen python -m rafeeq.evaluate tasks.jsonl --config A B --trials 1
+# Continue after a quota/access interruption:
+uv run --frozen python -m rafeeq.evaluate tasks.jsonl --config A B --trials 1 --resume
 ```
 
-The first command needs no inference key. The second requires one and saves CSV results, traces, a summary and error analysis under `results/`. Graders check answer values, successful tool execution, policy citations and database state. Runtime errors and pending tasks are reported separately from scored outcomes. Existing results are preserved; a new run requires a new output directory. [Evaluation status](results/README.md).
+The [25-task suite](tasks.jsonl) exceeds the 15-task minimum. A uses base instructions; B adds a retrieval-first instruction. Tools, models and security controls are otherwise identical. Graders check answers, successful tool calls, citations, proposed amounts and database state.
 
-## Security analysis
+| Configuration | Planned tasks | Completed live tasks | Pass rate |
+|---|---:|---:|---|
+| A | 25 | 0 | Not measured |
+| B | 25 | 0 | Not measured |
 
-**Threat:** an instruction asks the assistant to read another applicant's record and send it to an external address.
+The inference key was unavailable during validation, so live results remain pending. Saved results include traces, an error analysis and a source fingerprint. Resumption preserves scored outcomes and rejects changed code, tasks or model settings. Runtime failures and pending tasks are separate from scored failures. [Evaluation status](results/README.md).
 
-| Risk | Enforced protection |
-|---|---|
-| Access to another applicant's record | Server-owned applicant identity and ownership checks before lookup |
-| Sending records to an attacker | No model-facing email or arbitrary network-fetch tool |
-| Booking without consent | The model creates a proposal; a separate authenticated endpoint handles approval |
-| Executing an incomplete model reply | Truncated replies cannot execute their requested tools |
-| Repeating an approved action | A database constraint prevents executing the same approval twice |
+## Security
 
-**Tested attack:** a controlled-provider test requested `MDR-2001`, belonging to a different synthetic applicant, and attempted an unavailable email tool. Both calls were rejected. Additional tests cover approval ownership, replay and incomplete replies. This validates code-enforced boundaries; the live-model injection task remains pending.
+**Risk:** an instruction asks the AI to reveal another applicant's record or perform an action without approval.
 
-**Lethal trifecta:** application records are potentially private data; user messages and retrieved content are untrusted input; OpenRouter inference is an external destination. No arbitrary network tool is available, but prompts and relevant tool results still reach the inference provider. Only synthetic data is intended for this prototype.
+**Defence:** the server verifies the applicant and checks ownership. Model arguments cannot select the owner or approve an action. Proposals are tied to the verified session, and approval rechecks the stored details. Incomplete model replies cannot execute tools.
 
-[Security test evidence and reproduction commands](docs/SECURITY.md).
+Three failed verification attempts lock the session. Verification expires after 30 minutes. Common identity, mobile, email and credential patterns are masked before model input, stored conversation history and traces. Session tokens and identity credentials are stored as hashes.
 
-## Course requirements
+Controlled-provider tests attempted cross-owner access, unavailable email tools, cross-session approvals and action replay; the host rejected them. Live-model attack evaluation is still pending. [Security evidence](docs/SECURITY.md).
 
-| Requirement | Evidence | Status |
-|---|---|---|
-| At least 3 tools, including MCP | 4 tools; retrieval and calculation use MCP | Implemented and tested |
-| Context specification, retrieval and a budget rule | `rafeeq/spec.md`, policy search and bounded context | Implemented and tested |
-| Human-approved write and execution limits | Separate approval endpoint, step/tool limits and estimated spending reservations | Implemented and tested; actual provider billing is not enforced |
-| At least 15 tasks executed on both configurations | 18 tasks and A/B graders; 0 live tasks completed per configuration | **Incomplete: inference key required** |
-| Security analysis, attack and defence | Ownership, unavailable-tool, approval and truncated-reply tests | Code controls tested; live-model attack pending |
+**Lethal trifecta:** applicant records are potentially private data; user messages and documents are untrusted input; the inference provider is an external destination. Relevant questions and tool results still reach OpenRouter, even without email or arbitrary network tools. Only synthetic data is intended for this demo.
 
 ## Limitations
 
-The demo has one applicant identity, local inspection storage and no production identity system. Scheduling does not account for appointment capacity or public holidays. The web interface does not retain conversation history. Spending reservations are estimates, not verified provider charges. Production use requires separate accounts, stronger data protection and a review of provider processing terms.
+Demo verification is not a production identity system. Scheduling uses dates rather than hourly capacity, and public holidays are not implemented. Refunds are local requests; no payment gateway is connected. Cost reservations are estimates, not verified billing. Public hosting requires an access code and provider spending limits; the free Render configuration has temporary storage that can reset.
 
 ## Acknowledgements
 
-Thanks to SDAIA Academy and the course instructor for the practical examples connecting context engineering, tool use, evaluation and security.
+Thanks to SDAIA Academy and the course instructor for the practical examples connecting AI assistants, tools, evaluation and security.
 
 [Course requirements](https://github.com/SDAIAAcademy/agentic-ai/tree/main/labs/capstone) · [Synthetic data sources](data/ATTRIBUTION.md) · [Tests](tests/)

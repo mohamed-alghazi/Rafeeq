@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from rafeeq import evaluate as E
 from rafeeq.agent import run_agent
-from rafeeq.store import Store
+from rafeeq.store import Store, DEMO_IDENTITIES
 
 
 @pytest.mark.parametrize('answer,term,expected', [
@@ -44,9 +44,10 @@ def test_incomplete_reply_cannot_create_proposal(tmp_path):
         async def complete(self,messages,tools):
             return {'finish_reason':'length','message':{'role':'assistant','tool_calls':[{'id':'x','type':'function','function':{'name':'propose_inspection','arguments':json.dumps({'application_id':'MDR-1001','day':'2030-01-06'})}}]}}
     store=Store(tmp_path/'db.sqlite')
-    result=asyncio.run(run_agent('Book an inspection',store,Truncated()))
+    token=store.create_session();i=DEMO_IDENTITIES['demo-user'];store.verify(token,i['application_id'],i['last4'],i['mobile'])
+    result=asyncio.run(run_agent('Book an inspection',store,Truncated(),session_id=token))
     assert result['stopped']=='incomplete_response'
-    assert store.counts('demo-user')=={'pending':0,'inspections':0}
+    assert store.counts('demo-user')=={'pending':0,'inspections':0,'refunds':0,'escalations':0}
     assert result['trace']==[]
 
 
@@ -66,14 +67,14 @@ def test_provider_error_preserves_pending_rows_without_false_scores(tmp_path,mon
     summary=json.loads((args.output/'summary.json').read_text())
     assert summary['run']['mode']=='controlled-test-fixture'
     assert summary['configs']['A']['errors']==1
-    assert summary['configs']['A']['pending']==17
+    assert summary['configs']['A']['pending']==len(E.load_tasks(args.tasks))-1
     assert summary['configs']['A']['completed']==0
     assert summary['configs']['A']['pass_rate'] is None
-    assert summary['configs']['B']['pending']==18
+    assert summary['configs']['B']['pending']==len(E.load_tasks(args.tasks))
     assert 'Do not copy' not in (args.output/'traces.jsonl').read_text()
     with (args.output/'eval-B.csv').open() as stream:
         rows=list(csv.DictReader(stream))
-    assert len(rows)==18 and all(r['status']=='pending' for r in rows)
+    assert len(rows)==len(E.load_tasks(args.tasks)) and all(r['status']=='pending' for r in rows)
 
 
 def test_evaluation_preserves_existing_results(tmp_path):

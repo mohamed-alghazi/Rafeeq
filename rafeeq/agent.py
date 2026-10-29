@@ -11,6 +11,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from openai import AsyncOpenAI
 from rafeeq.store import Store
+from rafeeq.privacy import redact, redact_text
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_STEPS = 8
@@ -21,9 +22,19 @@ MAX_OUTPUT_TOKENS = 800
 RESERVATION_PER_REQUEST = 0.006
 MAX_COST_USD = 0.05
 
+def tool(name, description, fields):
+    return {'type':'function','function':{'name':name,'description':description,
+            'parameters':{'type':'object','properties':{k:{'type':'string','description':v} for k,v in fields.items()},
+                          'required':list(fields),'additionalProperties':False}}}
+
+
 LOCAL_TOOLS = [
-    {'type': 'function', 'function': {'name': 'get_application', 'description': 'Read one synthetic application belonging to the current applicant.', 'parameters': {'type': 'object', 'properties': {'application_id': {'type': 'string'}}, 'required': ['application_id'], 'additionalProperties': False}}},
-    {'type': 'function', 'function': {'name': 'propose_inspection', 'description': 'Propose an inspection. Does NOT book; requires separate human approval.', 'parameters': {'type': 'object', 'properties': {'application_id': {'type': 'string'}, 'day': {'type': 'string', 'description': 'Future working date YYYY-MM-DD'}}, 'required': ['application_id', 'day'], 'additionalProperties': False}}},
+    tool('get_application','Read a verified applicant\'s synthetic application.',{'application_id':'Application ID'}),
+    tool('list_inspections','List the verified applicant\'s existing inspections.',{'application_id':'Application ID'}),
+    tool('propose_inspection','Prepare an inspection. Human approval is required before booking.',{'application_id':'Application ID','day':'Future Sunday–Thursday, YYYY-MM-DD'}),
+    tool('propose_reschedule','Prepare a change to an existing inspection. Human approval is required.',{'inspection_id':'ID from list_inspections','day':'New future date, YYYY-MM-DD'}),
+    tool('propose_refund','Calculate a policy-eligible refund and prepare a request. Never pays money. Requires human approval; above 1000 SAR also awaits finance.',{'application_id':'Application ID'}),
+    tool('propose_escalation','Prepare escalation of an active overdue application. Human approval required.',{'application_id':'Application ID'}),
 ]
 
 
@@ -34,6 +45,7 @@ class Provider(Protocol):
 class OpenRouterProvider:
     def __init__(self):
         native = os.getenv('RAFEEQ_PROVIDER', 'openrouter') == 'openai'
+        self.provider_name = 'openai' if native else 'openrouter'
         key = os.getenv('OPENAI_API_KEY' if native else 'OPENROUTER_API_KEY')
         if not key: raise ValueError('Provider key is missing; configure it securely in the environment.')
         self.client = AsyncOpenAI(api_key=key, base_url='https://api.openai.com/v1' if native else 'https://openrouter.ai/api/v1', timeout=45, max_retries=0)
@@ -51,23 +63,32 @@ class OpenRouterProvider:
 
 
 def trim_history(history: list) -> list:
-    # History contains completed user/assistant turns only, never orphan tool results.
-    history = history[-12:]
-    while history and history[0].get('role') != 'user': history = history[1:]
+    history = [{'role':m['role'],'content':redact_text(m['content'])} for m in history
+               if m.get('role') in {'user','assistant'} and isinstance(m.get('content'),str) and not m.get('tool_calls')][-12:]
+    while history and history[0]['role'] != 'user': history = history[1:]
     while len(json.dumps(history, ensure_ascii=False)) > 8_000: history = history[2:]
     return history
 
 
-async def run_agent(prompt: str, store: Store, provider: Provider, config='B', history=None, owner='demo-user') -> dict:
+async def run_agent(prompt: str, store: Store, provider: Provider, config='B', history=None, owner=None, session_id=None) -> dict:
     if config not in {'A', 'B'}: raise ValueError('Unknown configuration')
     spec = (ROOT / 'rafeeq/spec.md').read_text()
     # One controlled difference: B adds an evidence-retrieval instruction.
     if config == 'B': spec += '\nFor fee and policy questions, start by retrieving the relevant policy before computing or answering.'
-    messages = [{'role': 'system', 'content': spec}, *trim_history(history or []), {'role': 'user', 'content': prompt}]
+    if session_id:
+        history = store.history(session_id)
+    messages = [{'role': 'system', 'content': spec}, *trim_history(history or []), {'role': 'user', 'content': redact_text(prompt)}]
     trace, tokens, requests, reserved = [], 0, 0, 0.0
+    def scope():
+        if not session_id: raise ValueError('Verify the applicant in the verification form first')
+        return store.session(session_id, True)['owner']
+
     def finish(answer: str, stopped: str) -> dict:
+        answer = redact_text(answer)
+        current = store.session(session_id)['owner'] if session_id else None
+        if session_id and stopped == 'complete': store.remember(session_id, prompt, answer)
         return {'answer': answer, 'stopped': stopped, 'trace': trace, 'requests': requests,
-                'tokens': tokens, 'reserved_usd': round(reserved, 4), 'pending': store.pending(owner)}
+                'tokens': tokens, 'reserved_usd': round(reserved, 4), 'pending': store.pending(current, session_id) if current else []}
 
     async with AsyncExitStack() as stack:
         read, write = await stack.enter_async_context(stdio_client(StdioServerParameters(command=sys.executable, args=['-m', 'rafeeq.mcp_server'], cwd=str(ROOT))))
@@ -109,16 +130,19 @@ async def run_agent(prompt: str, store: Store, provider: Provider, config='B', h
                             content = [c.text for c in response.content if hasattr(c, 'text')]
                             try: output = json.loads(content[0]) if len(content) == 1 else {'content': content}
                             except ValueError: output = {'content': content}
-                    elif name == 'get_application':
-                        output = store.application(owner=owner, **args)
-                        ok = True
-                    elif name == 'propose_inspection':
-                        output = store.propose(owner=owner, **args)
+                    elif name in {t['function']['name'] for t in LOCAL_TOOLS}:
+                        current_owner = scope()
+                        if name == 'get_application': output = store.application(owner=current_owner, **args)
+                        elif name == 'list_inspections': output = store.inspections(owner=current_owner, **args)
+                        elif name == 'propose_inspection': output = store.propose(owner=current_owner, token=session_id, **args)
+                        elif name == 'propose_reschedule': output = store.reschedule(owner=current_owner, token=session_id, **args)
+                        elif name == 'propose_refund': output = store.refund(owner=current_owner, token=session_id, **args)
+                        else: output = store.escalate(owner=current_owner, token=session_id, **args)
                         ok = True
                     else: output = {'error': 'Tool not allowed'}
                 except (ValueError, TypeError):
-                    output = {'error': 'Invalid arguments or application unavailable'}
-                text = json.dumps(output, ensure_ascii=False)[:5000]
-                trace.append({'tool': name, 'arguments': args, 'ok': ok, 'result': text})
+                    output = {'error': 'Verification required, invalid arguments, or application unavailable'}
+                text = json.dumps(redact(output), ensure_ascii=False)[:5000]
+                trace.append({'tool': name, 'arguments': redact(args), 'ok': ok, 'result': text})
                 messages.append({'role': 'tool', 'tool_call_id': call['id'], 'content': text})
     return finish('Step budget reached.', 'step_budget')

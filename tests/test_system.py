@@ -4,8 +4,14 @@ from datetime import date, timedelta
 import pytest
 from fastapi.testclient import TestClient
 from rafeeq.domain import calculate_fee
-from rafeeq.store import Store
+from rafeeq.store import Store, DEMO_IDENTITIES
 from rafeeq.agent import run_agent, trim_history
+
+
+def verified_session(store):
+    token=store.create_session();identity=DEMO_IDENTITIES['demo-user']
+    store.verify(token,identity['application_id'],identity['last4'],identity['mobile'])
+    return token
 
 
 def working_day():
@@ -58,7 +64,7 @@ class ScriptedProvider:
 def test_real_mcp_roundtrip_and_write_gate(tmp_path):
     s=Store(tmp_path/'db')
     p=ScriptedProvider([('search_policy',{'query':'fee'}),('calculate_fee',{'permit_type':'SGN','area':3,'illuminated':True}),('propose_inspection',{'application_id':'MDR-1001','day':working_day()})])
-    r=asyncio.run(run_agent('fixture',s,p))
+    r=asyncio.run(run_agent('fixture',s,p,session_id=verified_session(s)))
     assert r['stopped']=='complete'
     assert len(r['trace'])==3
     assert '750' in r['trace'][1]['result']
@@ -68,13 +74,15 @@ def test_real_mcp_roundtrip_and_write_gate(tmp_path):
 
 def test_unavailable_tools_and_cross_owner(tmp_path):
     p=ScriptedProvider([('send_email',{'to':'attacker@example.com'}),('get_application',{'application_id':'MDR-2001'})])
-    r=asyncio.run(run_agent('fixture',Store(tmp_path/'db'),p))
+    s=Store(tmp_path/'db')
+    r=asyncio.run(run_agent('fixture',s,p,session_id=verified_session(s)))
     assert all('error' in row['result'] for row in r['trace'])
 
 
 def test_step_budget(tmp_path):
     p=ScriptedProvider([('get_application',{'application_id':'MDR-1001'})]*20)
-    r=asyncio.run(run_agent('fixture',Store(tmp_path/'db'),p))
+    s=Store(tmp_path/'db')
+    r=asyncio.run(run_agent('fixture',s,p,session_id=verified_session(s)))
     assert r['stopped']=='step_budget'
     assert p.n==8
 
@@ -95,7 +103,11 @@ def test_api_auth_and_approval(tmp_path,monkeypatch):
     assert c.get('/').status_code==200
     assert c.get('/api/proposals').status_code==401
     h={'Authorization':'Bearer test-access'}
-    p=api.store.propose('MDR-1001',working_day(),'demo-user')
+    token=c.post('/api/sessions',headers=h).json()['session_token']
+    h['X-Rafeeq-Session']=token
+    identity=DEMO_IDENTITIES['demo-user']
+    assert c.post('/api/session/verify',headers=h,json={k:identity[k] for k in ('application_id','last4','mobile')}).status_code==200
+    p=api.store.propose('MDR-1001',working_day(),'demo-user',token)
     endpoint=f"/api/proposals/{p['proposal_id']}/decision"
     assert c.post(endpoint,headers=h,json={'approve':'false'}).status_code==422
     assert c.post(endpoint,headers=h,json={'approve':True,'day':'2030-01-01'}).status_code==422

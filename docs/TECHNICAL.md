@@ -42,12 +42,12 @@ The idempotent setup script installs locked dependencies and creates `.env` with
 |---|---|
 | Prompt | `rafeeq/spec.md` defines scope, evidence use, language and permissions. |
 | Context | Keyword retrieval from three small policy documents; no embedding service needed. |
-| Context limits | 24,000 characters per request and 5,000 per tool result. The optional history helper retains at most 12 messages within 8,000 characters. The browser sends one question at a time. |
+| Context limits | 24,000 characters per request and 5,000 per tool result. The optional history helper retains at most 12 messages within 8,000 characters. The server loads the current session's redacted history. Completed user/assistant turns are retained in SQLite; tool transcripts and verification credentials are not stored as memory. |
 | Harness | At most 8 model requests, 12 tool calls and 800 output tokens per request. MCP requests have a 20-second timeout. API and evaluation runs have a 180-second timeout. |
 | Spending | Reserve an estimated USD 0.006 before each request, with a USD 0.05 run ceiling. This is not verified billing; provider pricing and spending limits must also be checked. |
 | Loop | Request tools, execute allowed calls, return results and continue until an answer or a stop condition. Incomplete replies cannot execute tools. |
 | Approval state | Pending → approved/rejected in SQLite. Model tools cannot call the approval executor. Ownership and the saved date are rechecked at execution. |
-| MCP | Read-only policy retrieval and fee calculation over stdio; lookup and proposal creation run locally. |
+| MCP | Read-only policy retrieval and fee calculation over stdio; application/inspection reads and four proposal tools run locally. |
 
 Inspection dates use Riyadh's current date and require a future Sunday–Thursday in `YYYY-MM-DD` format. Public holidays and appointment capacity are not implemented.
 
@@ -67,7 +67,7 @@ Controlled-provider tests supply predetermined responses to exercise program bou
 uv run --frozen python -m rafeeq.evaluate tasks.jsonl --config A B --trials 1
 ```
 
-The suite requires at least 15 tasks and unique IDs. The supplied suite has 18. A uses the base specification; B adds one retrieval-first instruction. All other controls are held constant.
+The suite requires at least 15 tasks and unique IDs. The supplied suite has 25. A uses the base specification; B adds one retrieval-first instruction. All other controls are held constant.
 
 Grading checks:
 
@@ -78,12 +78,25 @@ Grading checks:
 
 The runner saves progress after every task and stops after a runtime/provider error instead of exhausting the remaining quota. It does not store raw provider exception text. CSV statuses distinguish passed, failed, error and pending. Pass rates use scored completed tasks only. All-trial success is reported only for a fully scored suite; a single trial does not establish repeated-trial reliability.
 
-Outputs include CSVs, traces, metadata, task/spec hashes and a category-level error-analysis report. The report lists failed checks and observed A/B changes; causal conclusions still require inspecting the answers and traces. Previous results are not overwritten. Use a separate `--output` directory for another run; automatic resume is not implemented.
+Outputs include CSVs, traces, metadata, task/spec hashes and a category-level error-analysis report. The report lists failed checks and observed A/B changes; causal conclusions still require inspecting the answers and traces. Previous scored outcomes are preserved. Use `--resume` for a matching run, or a separate `--output` directory for changed inputs. `progress.json` is checksummed and atomically replaced; its fingerprint covers runtime code, policies, tasks, model, configuration and locked dependencies. `--max-tasks N` limits a batch, and an advisory file lock excludes concurrent writers. Resumption reruns pending/error tasks in fresh isolated fixtures and never repeats scored outcomes.
 
 Missing credentials create no result files. Exit codes are 0 for a complete pass, 1 for scored failures and 2 for incomplete execution or invalid setup. Live results remain pending until credentials are available.
 
 ## Data and deployment limits
 
-All supplied records are synthetic. Questions and relevant tool results are transmitted to OpenRouter and its serving provider. The local demo uses one applicant identity; its access token is not a production account system. Runtime SQLite files and `.env` are excluded from Git. The audit table stores proposal/decision identifiers without conversation transcripts or credentials.
+All supplied records are synthetic. Questions and relevant tool results are transmitted to OpenRouter and its serving provider. The demo includes two synthetic applicant identities. A shared site access code starts isolated sessions; a separate verification endpoint checks the application, last four ID digits and registered mobile. Verification expires after 30 minutes; three failed attempts lock the session. Session tokens are hashed in storage and identity fields use salted PBKDF2 hashes. This is not a production identity system. Runtime SQLite files and `.env` are excluded from Git. The audit table stores proposal/decision identifiers without conversation transcripts or credentials.
 
 Production deployment requires independent user authentication, data-protection controls, provider suitability review, rate limiting and real scheduling integration.
+
+
+## Applicant sessions and actions
+
+`POST /api/sessions` requires the site access code and returns an opaque session token. Subsequent calls send it in `X-Rafeeq-Session`. `POST /api/session/verify` accepts application ID, `last4` and mobile outside the model. Private tool calls recheck verification at execution time. A session cannot switch to a different applicant identity.
+
+`GET /api/history` returns only the current session's redacted turns; `DELETE /api/history` clears them. Expired verification hides earlier private history until reverification. Common Saudi mobile/identity patterns, email, IBAN and credential strings are masked before model input, storage and traces. Pattern matching is a minimisation control, not a complete detector for all sensitive information.
+
+All four action types create immutable pending proposals. Approval requires the same verified session and rechecks ownership and eligibility. Rescheduling compares the saved inspection version and date to reject stale proposals. Refund values are derived from stored fees and status under POL-06; above 1,000 SAR remains `pending_finance`, and no payment occurs. Escalation applies only to an active overdue application under POL-03. The prototype does not count public holidays or model paused-period histories.
+
+The terminal command `uv run --frozen python -m rafeeq chat` supports `/verify`, `/approve`, `/clear` and `/quit`. Verification uses concealed terminal input; the model never gets verification credentials. Browser tokens remain in memory and are not written to browser storage.
+
+[Hosted demo deployment](DEPLOYMENT.md)

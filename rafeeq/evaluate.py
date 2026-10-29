@@ -15,10 +15,12 @@ from tempfile import TemporaryDirectory
 
 from dotenv import load_dotenv
 from rafeeq.agent import OpenRouterProvider, run_agent
-from rafeeq.store import Store
+from rafeeq.store import Store, DEMO_IDENTITIES
+from rafeeq.privacy import redact
+from rafeeq.evaluation_state import fingerprint, source_commit, write_progress, read_progress, output_lock
 
 DIGITS = str.maketrans('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789')
-TOOLS = {'search_policy', 'calculate_fee', 'get_application', 'propose_inspection'}
+TOOLS = {'search_policy','calculate_fee','get_application','list_inspections','propose_inspection','propose_reschedule','propose_refund','propose_escalation'}
 
 
 def contains(answer: str, term: str) -> bool:
@@ -67,6 +69,14 @@ def grade_checks(task: dict, result: dict, state: dict | None = None) -> dict:
         checks['computed_fee'] = expected in fees
         checks['quoted_fee'] = contains(answer, str(expected)) or (
             expected == 0 and any(contains(answer, t) for t in ('exempt', 'معف')))
+    if task.get('expected_action'):
+        expected = task['expected_action']
+        actions = []
+        for event in trace:
+            if event['tool'].startswith('propose_') and event.get('ok') is True:
+                try: actions.append(json.loads(event['result']))
+                except (ValueError,TypeError): pass
+        checks['action_details'] = any(all(action.get(k) == v for k,v in expected.items()) for action in actions)
     if task.get('required_source'):
         checks['source'] = contains(answer, task['required_source'])
     for name, expected in task.get('state_checks', {}).items():
@@ -103,6 +113,8 @@ def atomic_text(path: Path, text: str):
 
 def save_progress(output: Path, rows: list, configs: list, metadata: dict):
     output.mkdir(parents=True, exist_ok=True)
+    rows = redact(rows)
+    write_progress(output/'progress.json', metadata, rows)
     columns = ['config', 'trial', 'task', 'category', 'status', 'stopped', 'requests', 'tokens', 'seconds', 'answer', 'checks']
     summaries = {}
     analysis = ['# Live evaluation error analysis', '',
@@ -153,48 +165,86 @@ def save_progress(output: Path, rows: list, configs: list, metadata: dict):
     return summaries
 
 
+def prepare_task(task, store):
+    token = store.create_session()
+    owner = task.get('verified_as')
+    if owner:
+        if owner not in DEMO_IDENTITIES: raise ValueError('Unknown synthetic evaluation identity')
+        identity = DEMO_IDENTITIES[owner]
+        store.verify(token, identity['application_id'], identity['last4'], identity['mobile'])
+    prompt = task['prompt']
+    if task.get('fixture_inspection'):
+        if not owner: raise ValueError('Inspection fixture requires a verified identity')
+        p = store.propose(task['fixture_inspection']['application_id'], task['fixture_inspection']['day'], owner, token)
+        outcome = store.decide(p['proposal_id'], True, owner, token)
+        prompt = prompt.replace('{{inspection_id}}', outcome['inspection_id'])
+    return token, prompt
+
+
 async def evaluate(args, provider=None):
     tasks = load_tasks(args.tasks)
-    if len(set(args.config)) != len(args.config):
-        raise ValueError('Configurations must not be repeated.')
-    if args.trials < 1:
-        raise ValueError('Trials must be positive.')
-    targets = [args.output / f'eval-{c}.csv' for c in args.config] + [args.output / 'summary.json', args.output / 'traces.jsonl']
-    if any(p.exists() for p in targets):
-        raise ValueError('Results already exist. Choose a new --output directory to preserve the previous run.')
+    if len(set(args.config)) != len(args.config): raise ValueError('Configurations must not be repeated.')
+    if args.trials < 1: raise ValueError('Trials must be positive.')
+    resume = getattr(args,'resume',False)
+    max_tasks = getattr(args,'max_tasks',None)
+    if max_tasks is not None and max_tasks < 1: raise ValueError('--max-tasks must be positive')
+    targets = [args.output/f'eval-{c}.csv' for c in args.config] + [args.output/'summary.json',args.output/'progress.json',args.output/'traces.jsonl']
+    if not resume and any(p.exists() for p in targets):
+        raise ValueError('Results already exist. Use --resume or a new --output directory.')
+    if resume and not (args.output/'progress.json').exists(): raise ValueError('No resumable evaluation state exists')
     owned_provider = provider is None
-    provider = provider or OpenRouterProvider()  # Missing key: no output files created.
-    metadata = {'started_at': datetime.now(timezone.utc).isoformat(), 'model': getattr(provider, 'model', 'controlled-test-fixture'),
-                'tasks_sha256': hashlib.sha256(args.tasks.read_bytes()).hexdigest(),
-                'spec_sha256': hashlib.sha256(Path(__file__).with_name('spec.md').read_bytes()).hexdigest(),
-                'trials': args.trials, 'mode': 'live' if owned_provider else 'controlled-test-fixture'}
-    rows = [dict(config=c, trial=trial, task=t['id'], category=t['category'], status='pending', stopped='', requests=None,
-                 tokens=None, seconds=None, answer='', checks={})
-            for c in args.config for trial in range(1, args.trials + 1) for t in tasks]
-    lookup = {t['id']: t for t in tasks}
+    provider = provider or OpenRouterProvider()  # Missing key never creates result files.
+    mode = 'live' if owned_provider else 'controlled-test-fixture'
     try:
-        for row in rows:
-            started = time.monotonic()
-            with TemporaryDirectory() as tmp:
-                store = Store(Path(tmp) / 'db.sqlite')
-                try:
-                    result = await asyncio.wait_for(run_agent(lookup[row['task']]['prompt'], store, provider, row['config']), timeout=180)
-                    checks = grade_checks(lookup[row['task']], result, store.counts('demo-user'))
-                    row.update(status='passed' if len(checks) > 1 and all(checks.values()) else 'failed',
-                               stopped=result['stopped'], requests=result['requests'], tokens=result['tokens'],
-                               answer=result['answer'], checks=checks, trace=result['trace'], state=store.counts('demo-user'))
-                except Exception as exc:
-                    row.update(status='error', stopped=type(exc).__name__, answer='Runtime or provider error; no scored model outcome.')
-                row['seconds'] = round(time.monotonic() - started, 3)
-                summary = save_progress(args.output, rows, args.config, metadata)
-                if row['status'] == 'error':
-                    print('Stopped after a runtime/provider error. Saved completed work; remaining tasks are pending.')
+        run_hash, identity = fingerprint(args.tasks,args.config,args.trials,provider,mode)
+        rows = [dict(config=c,trial=trial,task=t['id'],category=t['category'],status='pending',stopped='',requests=None,
+                     tokens=None,seconds=None,answer='',checks={})
+                for c in args.config for trial in range(1,args.trials+1) for t in tasks]
+        keys = [(r['config'],r['trial'],r['task']) for r in rows]
+        metadata = {'started_at':datetime.now(timezone.utc).isoformat(),'model':getattr(provider,'model','controlled-test-fixture'),
+                    'tasks_sha256':identity['tasks'],'spec_sha256':identity['files']['rafeeq/spec.md'],
+                    'trials':args.trials,'mode':mode,'fingerprint':run_hash,'source_commit':source_commit(),'identity':identity}
+        with output_lock(args.output):
+            if resume:
+                metadata,rows = read_progress(args.output/'progress.json',run_hash,keys)
+            elif any(p.exists() for p in targets):
+                raise ValueError('Results already exist. Use --resume or a new --output directory.')
+            lookup = {t['id']:t for t in tasks}
+            executed = 0
+            for row in rows:
+                if row['status'] in {'passed','failed'}: continue
+                if max_tasks is not None and executed >= max_tasks:
+                    save_progress(args.output,rows,args.config,metadata)
+                    print('Batch limit reached. Continue with the same command and --resume.')
                     return 2
-        print(json.dumps(summary, indent=2))
-        return 0 if all(r['status'] == 'passed' for r in rows) else 1
+                if row['status'] == 'error':
+                    row.setdefault('previous_errors',[]).append({k:row[k] for k in ('stopped','seconds')})
+                row.update(status='pending',stopped='',requests=None,tokens=None,seconds=None,answer='',checks={})
+                started = time.monotonic()
+                task = lookup[row['task']]
+                with TemporaryDirectory() as tmp:
+                    store = Store(Path(tmp)/'db.sqlite')
+                    try:
+                        token,prompt = prepare_task(task,store)
+                        result = await asyncio.wait_for(run_agent(prompt,store,provider,row['config'],session_id=token),timeout=180)
+                        state = store.counts(task.get('verified_as','demo-user'))
+                        checks = grade_checks(task,result,state)
+                        row.update(status='passed' if len(checks)>1 and all(checks.values()) else 'failed',stopped=result['stopped'],
+                                   requests=result['requests'],tokens=result['tokens'],answer=result['answer'],checks=checks,
+                                   trace=result['trace'],state=state)
+                    except Exception as exc:
+                        row.update(status='error',stopped=type(exc).__name__,answer='Runtime or provider error; no scored model outcome.')
+                    row['seconds'] = round(time.monotonic()-started,3)
+                    save_progress(args.output,rows,args.config,metadata)
+                    executed += 1
+                    if row['status'] == 'error':
+                        print('Stopped after a runtime/provider error. Completed work is saved; resume after fixing access or quota.')
+                        return 2
+            summary = save_progress(args.output,rows,args.config,metadata)
+            print(json.dumps(summary,indent=2))
+            return 0 if all(r['status']=='passed' for r in rows) else 1
     finally:
-        if owned_provider:
-            await provider.close()
+        if owned_provider: await provider.close()
 
 
 def main():
@@ -204,6 +254,8 @@ def main():
     parser.add_argument('--config', nargs='+', choices=['A', 'B'], default=['A', 'B'])
     parser.add_argument('--trials', type=int, default=1)
     parser.add_argument('--output', type=Path, default=Path('results'))
+    parser.add_argument('--resume',action='store_true',help='Continue matching pending/error tasks; preserve scored outcomes')
+    parser.add_argument('--max-tasks',type=int,help='Maximum tasks attempted in this invocation; resume the remainder later')
     args = parser.parse_args()
     try:
         return asyncio.run(evaluate(args))

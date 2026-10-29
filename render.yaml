@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: rafeeq-demo
+    runtime: python
+    plan: free
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: .venv/bin/uvicorn rafeeq.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.14
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: RAFEEQ_ACCESS_TOKEN
+        sync: false
+      - key: RAFEEQ_DB
+        value: /tmp/rafeeq-demo.sqlite

@@ -37,4 +37,11 @@ These tests use temporary databases, synthetic records and controlled provider r
 
 The `injection`, `other-status` and `scope` cases are included in `tasks.jsonl`. Their live A/B outcomes are pending until a usable OpenRouter key is available. No undefended live control was run, so there is no measured before/after leak rate.
 
-This is a single-applicant local demo. Production use requires independent accounts, storage protection, provider-processing review and operational controls. A successful handler test is evidence for that boundary, not a claim that the whole system is secure.
+This is a synthetic multi-session demo with two fixture applicant identities and a shared site access code. Production use requires independent accounts, storage protection, provider-processing review and operational controls. A successful handler test is evidence for that boundary, not a claim that the whole system is secure.
+
+
+## Additional session and privacy coverage
+
+`tests/test_features.py` checks credential normalisation, three-attempt lockout, verification expiry, owner-switch rejection, cross-session action denial, memory isolation/redaction, and concealed validation errors. It also covers refund amounts and finance gating, stale rescheduling, duplicate-action prevention, and verified escalation.
+
+Verification credentials are entered outside chat and stored as salted hashes. Conversation memory contains bounded redacted text, not raw verification fields or tool transcripts. Session-token hashes scope memory and action approvals. The shared code and public demo fixture credentials are not production authentication. Redaction is pattern-based and cannot guarantee removal of every possible sensitive detail.
