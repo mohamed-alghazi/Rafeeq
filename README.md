@@ -102,7 +102,7 @@ The **lethal trifecta** is the combination of private records, untrusted instruc
 
 ## Demo limits
 
-This is a learning project with made-up identities, local action records and no payment service. Appointment capacity and public holidays are not included. The free Render setup uses temporary storage, and provider spending limits should be set before inviting testers. [Hosting details](docs/DEPLOYMENT.md#hosting-limitations).
+This is a learning project with fictional applications and no payment service. Appointment capacity and public holidays are not included. Sample data may reset between visits.
 
 ## Acknowledgements
 

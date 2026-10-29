@@ -43,6 +43,6 @@ A proposed action appears in the approval section. Review the application, date 
 
 Your conversation and pending requests belong to the current session. After refreshing the page or opening a new tab, click **Start demo** to begin a new conversation.
 
-The fictional application records are shared, so an earlier visitor may already have created an inspection or refund. A duplicate-action rejection is expected in that case. Free-hosting restarts can reset all demo data.
+The fictional application records are shared, so an earlier visitor may already have created an inspection or refund. A duplicate-action rejection is expected in that case. Sample data may reset between visits.
 
 Use the fictional verification details listed above when trying application requests.
