@@ -102,6 +102,6 @@ The **lethal trifecta** is the combination of private records, untrusted instruc
 
 ## Acknowledgements
 
-Thanks to SDAIA Academy and [Dr. Modar M. Alfadly](https://github.com/xmodar) for the practical examples connecting AI assistants, tools, evaluation and security.
+Thanks to SDAIA Academy and [Dr. Modar M. Alfadly](https://github.com/xmodar) for their guidance and support.
 
 [Course requirements](https://github.com/SDAIAAcademy/agentic-ai/tree/main/labs/capstone) · [Synthetic data sources](data/ATTRIBUTION.md) · [Tests](tests/) · [Local setup](docs/TECHNICAL.md#local-setup)
