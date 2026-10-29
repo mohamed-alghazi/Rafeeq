@@ -8,7 +8,7 @@ Requirements: Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --frozen
-cp .env.example .env
+cp -n .env.example .env
 ```
 
 Preserve an existing `.env`. Set `OPENROUTER_API_KEY` and a long, randomly generated `RAFEEQ_ACCESS_TOKEN` in that file; never commit it.

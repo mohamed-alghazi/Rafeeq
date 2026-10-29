@@ -29,7 +29,7 @@ Python 3.11+, FastAPI, SQLite, HTML/JavaScript, OpenRouter and MCP. The default 
 
 ```bash
 uv sync --frozen
-cp .env.example .env
+cp -n .env.example .env
 ```
 
 Set `OPENROUTER_API_KEY` and a long, random `RAFEEQ_ACCESS_TOKEN` in `.env`. Preserve an existing `.env` when updating. The API key stays server-side; `.env` is excluded from Git.
@@ -75,6 +75,18 @@ The first command needs no inference key. The second requires one and saves CSV 
 **Tested attack:** a controlled-provider test requested `MDR-2001`, belonging to a different synthetic applicant, and attempted an unavailable email tool. Both calls were rejected. Additional tests cover approval ownership, replay and incomplete replies. This validates code-enforced boundaries; the live-model injection task remains pending.
 
 **Lethal trifecta:** application records are potentially private data; user messages and retrieved content are untrusted input; OpenRouter inference is an external destination. No arbitrary network tool is available, but prompts and relevant tool results still reach the inference provider. Only synthetic data is intended for this prototype.
+
+[Security test evidence and reproduction commands](docs/SECURITY.md).
+
+## Course requirements
+
+| Requirement | Evidence | Status |
+|---|---|---|
+| At least 3 tools, including MCP | 4 tools; retrieval and calculation use MCP | Implemented and tested |
+| Context specification, retrieval and a budget rule | `rafeeq/spec.md`, policy search and bounded context | Implemented and tested |
+| Human-approved write and execution limits | Separate approval endpoint, step/tool limits and estimated spending reservations | Implemented and tested; actual provider billing is not enforced |
+| At least 15 tasks executed on both configurations | 18 tasks and A/B graders; 0 live tasks completed per configuration | **Incomplete: inference key required** |
+| Security analysis, attack and defence | Ownership, unavailable-tool, approval and truncated-reply tests | Code controls tested; live-model attack pending |
 
 ## Limitations
 
