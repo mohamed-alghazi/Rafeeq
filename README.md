@@ -2,7 +2,11 @@
 
 **Rafeeq is an AI assistant that helps users check applications, calculate fees and request municipal services.** It prepares inspection bookings, appointment changes, refund requests and escalations. The user reviews each request and decides whether to approve it.
 
-Built for [Advanced Agentic AI Systems Engineering - SDAIA Academy](https://github.com/sdaiaacademy/agentic-ai/), Track 1: Rafeeq in production. Madar is a fictional municipality, and all demo records are made up.
+Built for [Advanced Agentic AI Systems Engineering - SDAIA Academy](https://github.com/sdaiaacademy/agentic-ai/).
+
+- **Track:** 1 — Rafeeq in production
+- **Team:** Individual
+- **Data:** Synthetic Madar records only
 
 ## Features
 
@@ -40,43 +44,35 @@ uv run --frozen uvicorn rafeeq.api:app --host 127.0.0.1 --port 8000
 
 Enter the site access code to start a conversation. Public fee and policy questions work without applicant verification. Application details and actions require the separate verification form. [Demo account and public hosting instructions](docs/DEPLOYMENT.md).
 
-## Testing and A/B comparison
+## Evaluation
 
-**60 automated application tests pass.** They check calculations, identity verification, separate conversations and action approval. For example, another applicant's record must stay hidden, and a refund must not be created before approval.
+The evaluation set contains **25 tasks** covering fees, policies, application status, identity checks, inspection booking, rescheduling, refunds, escalation and unsafe requests. Both configurations receive the same tasks and use the same model, tools, data and security controls.
 
-The A/B evaluation answers a different question: **does one additional instruction help the AI use policy information more consistently?**
+- **A — Base specification:** the standard instructions to use policy evidence, calculate fees with tools and prepare actions for human approval.
+- **B — Policy-first reminder:** the same instructions, with one added sentence asking the assistant to retrieve the relevant policy before computing a fee or answering a policy question.
 
-### What changes between A and B?
+The comparison tests whether this extra reminder improves correct tool use and policy-based answers. A already uses retrieval; B changes the emphasis and order, not the available tools or permissions.
 
-| Setting | Instructions |
-|---|---|
-| **A — Baseline** | The normal Rafeeq instructions: use policy evidence, calculate fees with the fee tool, verify access and wait for approval before actions. |
-| **B — Extra reminder** | The same instructions, plus an explicit reminder to retrieve the policy first when answering fee or policy questions. |
+| Configuration | Passed | Completed / planned | Pass rate |
+|---|---|---:|---|
+| A — Base specification | Not measured | 0 / 25 | Not measured |
+| B — Policy-first reminder | Not measured | 0 / 25 | Not measured |
 
-B adds this sentence:
+**The live A/B evaluation has not run yet because the OpenRouter key was unavailable.** No improvement or model pass rate has been measured.
 
-> For fee and policy questions, start by retrieving the relevant policy before computing or answering.
+Automatic graders check the expected answer, successful tool calls, policy references, proposed amounts and saved records. For example, the illuminated 3 m² sign task requires **750 SAR**, a successful fee calculation and the source `POL-02`. For a valid action request, graders check that the expected proposal remains pending without execution before approval.
 
-Both settings use the **same AI model, tools, records, security rules and limits**. A already has access to policy search and is instructed to use evidence. B changes the instruction emphasis; it does not add a new tool or remove a safety rule.
+Run both configurations:
 
-### How is the comparison checked?
+```bash
+uv run --frozen python -m rafeeq.evaluate tasks.jsonl --config A B --trials 1
+```
 
-Each setting receives the same **25 tasks**, covering fees, policy questions, application status, verification, bookings, refunds, rescheduling, escalation and unsafe requests.
+The runner saves per-task outcomes, tools, requests, tokens and elapsed time in `results/`. Its error report identifies failed checks and tasks that improve or worsen between A and B. Pending tasks and runtime errors remain separate from scored answers. Interrupted runs can continue with `--resume`.
 
-For example, an illuminated 3 m² sign should cost **750 SAR**: 600 SAR plus a 150 SAR lighting surcharge. The fee task checks that the assistant uses the calculation tool, gives the correct amount and cites `POL-02`. Action tasks also check the saved proposal and confirm that nothing is carried out without approval.
+**Application checks:** 60 automated tests pass. They verify the program's calculations, identity checks, conversation isolation and approval controls; they do not establish live AI answer quality.
 
-The comparison records which tasks pass, which checks fail and which tools were used. The error report shows tasks that improve or get worse between A and B. B is not assumed to be better; that conclusion must come from the results.
-
-### Current results
-
-| Setting | Live tasks completed | Pass rate |
-|---|---:|---|
-| A | 0 of 25 | Not measured |
-| B | 0 of 25 | Not measured |
-
-The live comparison has **not run yet** because the OpenRouter key was unavailable. The 60 passing application tests do not establish AI answer quality.
-
-[Evaluation commands and saved results](results/README.md) · [Technical evaluation details](docs/TECHNICAL.md#live-evaluation)
+[Evaluation commands and result status](results/README.md) · [Technical evaluation details](docs/TECHNICAL.md#live-evaluation)
 
 ## Security: the risk and the protection
 
