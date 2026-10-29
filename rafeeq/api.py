@@ -4,6 +4,7 @@ import asyncio
 import os
 import secrets
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Header, HTTPException
@@ -60,6 +61,11 @@ class Verification(StrictBody):
     mobile: str = Field(min_length=8, max_length=24)
 
 
+class PolicySearch(StrictBody):
+    query: str = Field(min_length=1, max_length=1000)
+    mode: Literal['A','B'] = 'B'
+
+
 class Decision(StrictBody):
     approve: StrictBool
 
@@ -73,6 +79,13 @@ def health():
     provider = os.getenv('RAFEEQ_PROVIDER', 'openrouter')
     key = os.getenv('OPENAI_API_KEY' if provider == 'openai' else 'OPENROUTER_API_KEY')
     return {'status': 'ok', 'synthetic': True, 'provider_configured': bool(key), 'access_configured': bool(os.getenv('RAFEEQ_ACCESS_TOKEN'))}
+
+
+@app.post('/api/policies/search')
+def search_public_policies(body: PolicySearch):
+    from rafeeq.retrieval import policy_search
+    try: return {'mode':body.mode,'local':True,'documents':policy_search(body.query,body.mode)}
+    except ValueError as exc: raise HTTPException(422,str(exc))
 
 
 @app.post('/api/sessions')

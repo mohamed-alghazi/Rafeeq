@@ -1,0 +1,26 @@
+{"id": "fee-food", "query": "What is the annual fee for a food truck permit?", "expected_policy": "POL-02"}
+{"id": "fee-building", "query": "What is the minimum building permit charge?", "expected_policy": "POL-02"}
+{"id": "fee-sign", "query": "What surcharge applies to illuminated signs?", "expected_policy": "POL-02"}
+{"id": "fee-arabic", "query": "كم رسوم اللوحة المضيئة؟", "expected_policy": "POL-02"}
+{"id": "fee-rounding", "query": "هل تقرب المساحة إلى أعلى عند حساب الرسوم؟", "expected_policy": "POL-02"}
+{"id": "fee-typo", "query": "How are iluminated sgn fees calculated?", "expected_policy": "POL-02"}
+{"id": "sla-weekend", "query": "Which days are the weekend for municipal services?", "expected_policy": "POL-03"}
+{"id": "sla-auto", "query": "Does a late decision automatically approve an application?", "expected_policy": "POL-03"}
+{"id": "sla-building", "query": "How many working days are allowed for a building decision?", "expected_policy": "POL-03"}
+{"id": "sla-start", "query": "متى تبدأ مدة الخدمة بعد التقديم؟", "expected_policy": "POL-03"}
+{"id": "sla-event", "query": "ما مدة خدمة رخصة الفعالية بأيام العمل؟", "expected_policy": "POL-03"}
+{"id": "refund-rejected", "query": "How much is refunded when an application is rejected?", "expected_policy": "POL-06"}
+{"id": "refund-before", "query": "What refund applies to withdrawal before review?", "expected_policy": "POL-06"}
+{"id": "refund-during", "query": "What refund applies to withdrawal during review?", "expected_policy": "POL-06"}
+{"id": "refund-finance", "query": "When does a refund need a finance officer?", "expected_policy": "POL-06"}
+{"id": "refund-arabic", "query": "كم استرداد الرسوم للطلب المرفوض؟", "expected_policy": "POL-06"}
+{"id": "identity-digits", "query": "Which identity digits and mobile are required for verification?", "expected_policy": "POL-08"}
+{"id": "identity-lockout", "query": "What happens after three failed identity checks?", "expected_policy": "POL-08"}
+{"id": "identity-expiry", "query": "How long does applicant verification remain valid?", "expected_policy": "POL-08"}
+{"id": "identity-form", "query": "Should ID credentials be entered in chat or a separate form?", "expected_policy": "POL-08"}
+{"id": "identity-arabic", "query": "كيف يتم التحقق من هوية صاحب الطلب ورقم الجوال؟", "expected_policy": "POL-08"}
+{"id": "scope-approval", "query": "May the assistant approve or reject a permit?", "expected_policy": "POL-10"}
+{"id": "scope-fines", "query": "Can the digital assistant issue or waive fines?", "expected_policy": "POL-10"}
+{"id": "scope-human", "query": "What should the assistant do when it is unsure?", "expected_policy": "POL-10"}
+{"id": "scope-contact", "query": "What is the municipal phone contact channel?", "expected_policy": "POL-10"}
+{"id": "out-of-scope", "query": "Quantum entanglement particle measurement apparatus", "expected_policy": null}
