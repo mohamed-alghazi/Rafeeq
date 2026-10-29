@@ -41,7 +41,7 @@ The idempotent setup script installs locked dependencies and creates `.env` with
 | Layer | Decision |
 |---|---|
 | Prompt | `rafeeq/spec.md` defines scope, evidence use, language and permissions. |
-| Context | Keyword retrieval from three small policy documents; no embedding service needed. |
+| Context | Keyword retrieval from five small policy documents; no embedding service needed. |
 | Context limits | 24,000 characters per request and 5,000 per tool result. The optional history helper retains at most 12 messages within 8,000 characters. The server loads the current session's redacted history. Completed user/assistant turns are retained in SQLite; tool transcripts and verification credentials are not stored as memory. |
 | Harness | At most 8 model requests, 12 tool calls and 800 output tokens per request. MCP requests have a 20-second timeout. API and evaluation runs have a 180-second timeout. |
 | Spending | Reserve an estimated USD 0.006 before each request, with a USD 0.05 run ceiling. This is not verified billing; provider pricing and spending limits must also be checked. |
