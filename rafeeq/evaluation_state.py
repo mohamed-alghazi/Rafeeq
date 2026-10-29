@@ -58,7 +58,7 @@ def read_progress(path, expected_fingerprint, expected_keys):
 
 @contextmanager
 def output_lock(output: Path):
-    # Advisory locks are released by the OS even if the process is interrupted.
+
     try: import fcntl
     except ImportError: raise ValueError('Evaluation locking requires Linux, macOS or WSL') from None
     output.mkdir(parents=True,exist_ok=True)

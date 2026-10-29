@@ -18,7 +18,7 @@ MAX_STEPS = 8
 MAX_CALLS = 12
 MAX_CONTEXT = 24_000
 MAX_OUTPUT_TOKENS = 800
-# Conservative preflight reservation, not a provider price guarantee.
+
 RESERVATION_PER_REQUEST = 0.006
 MAX_COST_USD = 0.05
 
@@ -73,7 +73,7 @@ def trim_history(history: list) -> list:
 async def run_agent(prompt: str, store: Store, provider: Provider, config='B', history=None, owner=None, session_id=None) -> dict:
     if config not in {'A', 'B'}: raise ValueError('Unknown configuration')
     spec = (ROOT / 'rafeeq/spec.md').read_text()
-    # One controlled difference: B adds an evidence-retrieval instruction.
+
     if config == 'B': spec += '\nFor fee and policy questions, start by retrieving the relevant policy before computing or answering.'
     if session_id:
         history = store.history(session_id)

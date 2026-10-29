@@ -13,7 +13,7 @@ from pathlib import Path
 from rafeeq.domain import validate_date
 from rafeeq.privacy import DIGITS, normalise_mobile, redact, redact_text
 
-# Intentionally public, synthetic fixtures. Never use real identity information here.
+
 DEMO_IDENTITIES = {
     'demo-user': {'application_id': 'MDR-1001', 'last4': '0001', 'mobile': '0550001001'},
     'other-user': {'application_id': 'MDR-2001', 'last4': '0002', 'mobile': '0550002002'},
@@ -39,7 +39,7 @@ class Store:
             CREATE TABLE IF NOT EXISTS refunds(id TEXT PRIMARY KEY, application TEXT UNIQUE, amount REAL, status TEXT, proposal TEXT UNIQUE);
             CREATE TABLE IF NOT EXISTS escalations(id TEXT PRIMARY KEY, application TEXT UNIQUE, overdue INTEGER, status TEXT, proposal TEXT UNIQUE);
             ''')
-            # Additive migrations preserve existing local databases and approvals.
+
             additions = {
                 'applications': [('permit_type', "TEXT DEFAULT 'SGN'"), ('fee_paid', 'REAL DEFAULT 750'),
                                  ('submitted', "TEXT DEFAULT '2026-09-01'"), ('duplicate_paid', 'REAL DEFAULT 0')],
@@ -209,7 +209,7 @@ class Store:
 
     def _overdue(self, app):
         if app['status'] != 'under_review': raise ValueError('Only active, unpaused applications may be escalated')
-        # The fixture has no public-holiday or paused-period history; disclose that limitation.
+
         from datetime import datetime
         from zoneinfo import ZoneInfo
         today = datetime.now(ZoneInfo('Asia/Riyadh')).date()

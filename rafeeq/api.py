@@ -22,7 +22,7 @@ lock = asyncio.Lock()
 
 @app.exception_handler(RequestValidationError)
 async def invalid_request(request, exc):
-    # Pydantic's default includes raw input, which may contain verification data.
+
     return JSONResponse(status_code=422, content={'detail': 'Invalid request fields'})
 
 

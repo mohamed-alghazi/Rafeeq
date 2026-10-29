@@ -27,7 +27,7 @@ def contains(answer: str, term: str) -> bool:
     answer = answer.lower().translate(DIGITS)
     term = str(term).lower().translate(DIGITS)
     if re.fullmatch(r'\d[\d,]*(?:\.\d+)?', term):
-        # A zero inside 300, or 750 inside 1750, must not pass.
+
         answer = re.sub(r'(?<=\d)[,٬](?=\d)', '', answer)
         number = re.escape(term.replace(',', ''))
         return bool(re.search(r'(?<![\w.])' + number + r'(?:\.0+)?(?![\w.])', answer))
@@ -193,7 +193,7 @@ async def evaluate(args, provider=None):
         raise ValueError('Results already exist. Use --resume or a new --output directory.')
     if resume and not (args.output/'progress.json').exists(): raise ValueError('No resumable evaluation state exists')
     owned_provider = provider is None
-    provider = provider or OpenRouterProvider()  # Missing key never creates result files.
+    provider = provider or OpenRouterProvider()
     mode = 'live' if owned_provider else 'controlled-test-fixture'
     try:
         run_hash, identity = fingerprint(args.tasks,args.config,args.trials,provider,mode)
