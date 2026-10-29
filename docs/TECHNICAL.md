@@ -41,7 +41,7 @@ The idempotent setup script installs locked dependencies and creates `.env` with
 | Layer | Decision |
 |---|---|
 | Prompt | `rafeeq/spec.md` defines scope, evidence use, language and permissions. |
-| Context | Keyword retrieval from five small policy documents; no embedding service needed. |
+| Context | Hybrid word/character TF-IDF over five policy documents; no embedding or inference service is needed for search. |
 | Context limits | 24,000 characters per request and 5,000 per tool result. The optional history helper retains at most 12 messages within 8,000 characters. The server loads the current session's redacted history. Completed user/assistant turns are retained in SQLite; tool transcripts and verification credentials are not stored as memory. |
 | Harness | At most 8 model requests, 12 tool calls and 800 output tokens per request. MCP requests have a 20-second timeout. API and evaluation runs have a 180-second timeout. |
 | Spending | Reserve an estimated USD 0.006 before each request, with a USD 0.05 run ceiling. This is not verified billing; provider pricing and spending limits must also be checked. |
@@ -100,3 +100,18 @@ All four action types create immutable pending proposals. Approval requires the 
 The terminal command `uv run --frozen python -m rafeeq chat` supports `/verify`, `/approve`, `/clear` and `/quit`. Verification uses concealed terminal input; the model never gets verification credentials. Browser tokens remain in memory and are not written to browser storage.
 
 [Hosted demo deployment](DEPLOYMENT.md)
+
+
+## Local policy search and retrieval benchmark
+
+`POST /api/policies/search` accepts `query` (1–1,000 characters) and `mode` (`A` or `B`). It searches public synthetic policies without a session or inference key. Private application and proposal endpoints retain their authentication and verification requirements. The model-facing `search_policy` tool uses hybrid mode B.
+
+A uses sublinear word unigram/bigram TF-IDF with English stop words. B combines 70% word cosine similarity and 30% character-within-word 3–5-gram similarity. Both share the same normalisation, small bilingual alias dictionary and minimum score of 0.08. Aliases and thresholds were not changed after measuring the frozen task set.
+
+```bash
+uv run --frozen python -m rafeeq.retrieval_eval --output .runtime/retrieval-check
+```
+
+The benchmark records top-1 correctness, hit-at-2, elapsed time, corpus/task/implementation hashes, dependency versions and the source commit. It uses no inference API. Its exit status is 1 if any task mismatches; this does not mean the benchmark failed to execute. The source set includes an abstention case and keeps all observed failures.
+
+The 26-query retrieval comparison is separate from the 25-task prompt A/B assistant evaluation. Replacing a pending assistant score with a local search score would misstate coverage.

@@ -1,7 +1,7 @@
-# Live evaluation status
+# Full-assistant evaluation status
 
 No live model evaluations have been completed: `OPENROUTER_API_KEY` was unavailable during validation.
-The 60 passing automated tests validate application behavior and integration controls, not model answer quality.
+The 68 passing automated tests validate application behavior and integration controls, not model answer quality.
 
 | Configuration | Planned tasks | Completed live tasks | Pass rate |
 |---|---:|---:|---|
@@ -24,3 +24,5 @@ Resume verifies the progress checksum and the fingerprint of runtime code, polic
 Passed, failed, error and pending statuses remain distinct. Runtime errors stop further inference; pending tasks and runtime errors do not enter scored pass rates. Repeated-trial success is reported only for a complete scored suite. Progress checksums detect accidental corruption; they are not signatures against a malicious file editor.
 
 Exit codes: **0** complete pass, **1** complete suite with scored failures, **2** incomplete execution or invalid setup. The evaluation runner requires Linux, macOS or WSL for advisory file locking.
+
+The separate local TF-IDF retrieval experiment has executed results in [evaluations/retrieval/results/REPORT.md](../evaluations/retrieval/results/REPORT.md). Those retrieval scores are not full-assistant scores.

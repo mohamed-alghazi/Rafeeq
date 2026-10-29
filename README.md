@@ -15,7 +15,7 @@ Built for [Advanced Agentic AI Systems Engineering - SDAIA Academy](https://gith
 - Prepares bookings, appointment changes, refunds and escalations for approval.
 - Remembers the current conversation while hiding common sensitive details.
 - Uses **8 tools**, including two connected through MCP.
-- Includes **25 evaluation tasks** and can continue an interrupted evaluation.
+- Includes **25 full-assistant evaluation tasks**, a **26-question local search benchmark**, and resumable evaluation.
 
 ## Tools
 
@@ -34,7 +34,7 @@ A prepared request waits for the user's approval. Refunds above **1,000 SAR** al
 
 ## Getting started
 
-The app requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and an OpenRouter key. The [setup guide](docs/TECHNICAL.md#local-setup) covers installation and the two settings: the provider key and the site's access code.
+The app requires Python 3.11+ and [uv](https://docs.astral.sh/uv/). **Public policy search works without an API key.** AI chat requires an OpenRouter key and a site access code. The [setup guide](docs/TECHNICAL.md#local-setup) covers both modes.
 
 After setup, start the app with:
 
@@ -42,37 +42,43 @@ After setup, start the app with:
 uv run --frozen uvicorn rafeeq.api:app --host 127.0.0.1 --port 8000
 ```
 
-Enter the site access code to start a conversation. Public fee and policy questions work without applicant verification. Application details and actions require the separate verification form. [Demo account and public hosting instructions](docs/DEPLOYMENT.md).
+The policy-search button runs locally and supports search modes A and B. To use AI chat, enter the site access code. Application details and actions also require the separate verification form. [Demo account and public hosting instructions](docs/DEPLOYMENT.md).
 
-## Evaluation
+## Local search evaluation
 
-The evaluation set contains **25 tasks** covering fees, policies, application status, identity checks, inspection booking, rescheduling, refunds, escalation and unsafe requests. Both configurations receive the same tasks and use the same model, tools, data and security controls.
+Both settings were run on the same **26 frozen questions** against five policy documents. The set includes English and Arabic questions, a misspelling and one out-of-scope query.
 
-- **A — Base specification:** the standard instructions to use policy evidence, calculate fees with tools and prepare actions for human approval.
-- **B — Policy-first reminder:** the same instructions, with one added sentence asking the assistant to retrieve the relevant policy before computing a fee or answering a policy question.
+- **A — Word TF-IDF:** ranks policies using matching words and word pairs.
+- **B — Word + character TF-IDF:** combines word matching with short character sequences, which can help with word variations.
 
-The comparison tests whether this extra reminder improves correct tool use and policy-based answers. A already uses retrieval; B changes the emphasis and order, not the available tools or permissions.
+A task passes when the first result is the expected policy. The out-of-scope task must return no result. Query aliases and the relevance threshold are the same in both settings.
 
-| Configuration | Passed | Completed / planned | Pass rate |
-|---|---|---:|---|
-| A — Base specification | Not measured | 0 / 25 | Not measured |
-| B — Policy-first reminder | Not measured | 0 / 25 | Not measured |
+| Configuration | Top-1 matches | LLM requests | LLM tokens | Provider cost |
+|---|---:|---:|---:|---:|
+| A: word TF-IDF | 23/26 (88.5%) | 0 | 0 | $0.00 |
+| B: word + character TF-IDF | 24/26 (92.3%) | 0 | 0 | $0.00 |
 
-**The live A/B evaluation has not run yet because the OpenRouter key was unavailable.** No improvement or model pass rate has been measured.
+B returned the correct first policy for **one additional question**, an improvement of **3.8 percentage points**. It resolved A's missed weekend-policy question. Both still selected the wrong policy for two Arabic questions about refunds and identity verification. The frozen test set was retained, including these failures.
 
-Automatic graders check the expected answer, successful tool calls, policy references, proposed amounts and saved records. For example, the illuminated 3 m² sign task requires **750 SAR**, a successful fee calculation and the source `POL-02`. For a valid action request, graders check that the expected proposal remains pending without execution before approval.
+The zeros mean this comparison made **no AI-provider requests**. TF-IDF runs locally; it still uses CPU time. This is a small document-retrieval benchmark, not a measure of generated-answer quality or the complete assistant.
 
-Run both configurations:
+Reproduce it without a key:
 
 ```bash
-uv run --frozen python -m rafeeq.evaluate tasks.jsonl --config A B --trials 1
+uv run --frozen python -m rafeeq.retrieval_eval --output .runtime/retrieval-check
 ```
 
-The runner saves per-task outcomes, tools, requests, tokens and elapsed time in `results/`. Its error report identifies failed checks and tasks that improve or worsen between A and B. Pending tasks and runtime errors remain separate from scored answers. Interrupted runs can continue with `--resume`.
+The command returns exit code 1 when a retrieval case mismatches, while still saving every result. Evidence: [A.csv](evaluations/retrieval/results/A.csv), [B.csv](evaluations/retrieval/results/B.csv), [26 questions](evaluations/retrieval/tasks.jsonl), [report and mismatches](evaluations/retrieval/results/REPORT.md), [run metadata](evaluations/retrieval/results/summary.json).
 
-**Application checks:** 60 automated tests pass. They verify the program's calculations, identity checks, conversation isolation and approval controls; they do not establish live AI answer quality.
+**Full-assistant evaluation is separate:** the 25-task prompt A/B suite checks generated answers, calculations, identity rules, pending actions and security. It remains at **0/25 executed per prompt setting**, because the OpenRouter key is unavailable. The local search scores do not satisfy that end-to-end execution requirement. [Full-assistant evaluation status](results/README.md).
 
-[Evaluation commands and result status](results/README.md) · [Technical evaluation details](docs/TECHNICAL.md#live-evaluation)
+**68 automated application tests pass**, including real MCP integration, private-session boundaries, approvals and local-search access. These are not live model scores.
+
+## App preview
+
+A real browser capture after a local policy search. No AI response was mocked or generated for this screenshot.
+
+![Rafeeq showing real local policy-search results](docs/images/policy-search.png)
 
 ## Security: the risk and the protection
 

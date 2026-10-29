@@ -1,0 +1,58 @@
+{
+  "run": {
+    "scope": "local policy retrieval only; not a full-assistant evaluation",
+    "ran_at": "2026-10-29T08:35:38.964788+00:00",
+    "source_commit": "b3565149d8538bf98a2fa74b92529b89a89b1bdb",
+    "tasks_sha256": "2188cb31bd258b5c781e07d347ced22236510960a29313e206db762b423e65cb",
+    "corpus": {
+      "POL-02": "7f6cf66294f5887fece22dba3d050c0c5ab1c54bdef8ed62d742e21a89df7e3e",
+      "POL-03": "ad1f4affbeb7f4096b9c9f7d91ba4c7989978d774ebec812c91caff7f36d1f02",
+      "POL-06": "b5ec8c4231459c5f351f5bd86fb5be02a266c67ef9cd88f35ddf27956cf7e977",
+      "POL-08": "42068de77cc80760bf782fb22880b369361dff038fdf36d099bf88fdeeeb46cc",
+      "POL-10": "9c7789800bba736a9f1b34a829bf34ad9f4d70e28e1e10b3cacc4557da170c65"
+    },
+    "implementation_sha256": "182e8b81bab77f8c4825906209d698c0a6ad0f99238286680c9dae255213d3c4",
+    "python": "3.12.14",
+    "scikit_learn": "1.9.1",
+    "minimum_score": 0.08,
+    "hybrid_word_weight": 0.7,
+    "query_aliases": {
+      "رسوم": "fees fee",
+      "استرداد": "refund",
+      "مرفوض": "rejected",
+      "رفض": "reject",
+      "سحب": "withdrawal",
+      "مراجعة": "review",
+      "هوية": "identity",
+      "جوال": "mobile",
+      "تحقق": "verification",
+      "التحقق": "verification",
+      "لوحة": "sign",
+      "اللوحة": "sign",
+      "مضيئة": "illuminated",
+      "المضيئة": "illuminated",
+      "بناء": "building",
+      "عطلة": "weekend",
+      "التصعيد": "escalation",
+      "تصعيد": "escalation"
+    }
+  },
+  "configs": {
+    "A": {
+      "passed": 23,
+      "total": 26,
+      "hit_at_2": 24,
+      "llm_requests": 0,
+      "llm_tokens": 0,
+      "provider_cost_usd": 0
+    },
+    "B": {
+      "passed": 24,
+      "total": 26,
+      "hit_at_2": 25,
+      "llm_requests": 0,
+      "llm_tokens": 0,
+      "provider_cost_usd": 0
+    }
+  }
+}

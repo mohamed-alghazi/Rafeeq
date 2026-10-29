@@ -1,0 +1,27 @@
+config,task,query,expected_policy,top_policy,passed,hit_at_2,score,seconds,llm_requests,llm_tokens,provider_cost_usd
+B,fee-food,What is the annual fee for a food truck permit?,POL-02,POL-02,True,True,0.103977,0.004226,0,0,0
+B,fee-building,What is the minimum building permit charge?,POL-02,POL-02,True,True,0.117341,0.002749,0,0,0
+B,fee-sign,What surcharge applies to illuminated signs?,POL-02,POL-02,True,True,0.162881,0.002467,0,0,0
+B,fee-arabic,كم رسوم اللوحة المضيئة؟,POL-02,POL-02,True,True,0.194381,0.003087,0,0,0
+B,fee-rounding,هل تقرب المساحة إلى أعلى عند حساب الرسوم؟,POL-02,POL-02,True,True,0.112433,0.002972,0,0,0
+B,fee-typo,How are iluminated sgn fees calculated?,POL-02,POL-02,True,True,0.138084,0.002469,0,0,0
+B,sla-weekend,Which days are the weekend for municipal services?,POL-03,POL-03,True,True,0.10517,0.002653,0,0,0
+B,sla-auto,Does a late decision automatically approve an application?,POL-03,POL-03,True,True,0.119464,0.002802,0,0,0
+B,sla-building,How many working days are allowed for a building decision?,POL-03,POL-03,True,True,0.177412,0.004528,0,0,0
+B,sla-start,متى تبدأ مدة الخدمة بعد التقديم؟,POL-03,POL-03,True,True,0.136665,0.00221,0,0,0
+B,sla-event,ما مدة خدمة رخصة الفعالية بأيام العمل؟,POL-03,POL-03,True,True,0.143177,0.00245,0,0,0
+B,refund-rejected,How much is refunded when an application is rejected?,POL-06,POL-06,True,True,0.131591,0.001648,0,0,0
+B,refund-before,What refund applies to withdrawal before review?,POL-06,POL-06,True,True,0.269692,0.001628,0,0,0
+B,refund-during,What refund applies to withdrawal during review?,POL-06,POL-06,True,True,0.267588,0.001528,0,0,0
+B,refund-finance,When does a refund need a finance officer?,POL-06,POL-06,True,True,0.172103,0.003306,0,0,0
+B,refund-arabic,كم استرداد الرسوم للطلب المرفوض؟,POL-06,POL-10,False,False,0.08764,0.002239,0,0,0
+B,identity-digits,Which identity digits and mobile are required for verification?,POL-08,POL-08,True,True,0.275653,0.003365,0,0,0
+B,identity-lockout,What happens after three failed identity checks?,POL-08,POL-08,True,True,0.214293,0.001778,0,0,0
+B,identity-expiry,How long does applicant verification remain valid?,POL-08,POL-08,True,True,0.236769,0.002916,0,0,0
+B,identity-form,Should ID credentials be entered in chat or a separate form?,POL-08,POL-08,True,True,0.192893,0.002148,0,0,0
+B,identity-arabic,كيف يتم التحقق من هوية صاحب الطلب ورقم الجوال؟,POL-08,POL-10,False,True,0.188853,0.00386,0,0,0
+B,scope-approval,May the assistant approve or reject a permit?,POL-10,POL-10,True,True,0.126773,0.002391,0,0,0
+B,scope-fines,Can the digital assistant issue or waive fines?,POL-10,POL-10,True,True,0.175608,0.003228,0,0,0
+B,scope-human,What should the assistant do when it is unsure?,POL-10,POL-10,True,True,0.121659,0.002535,0,0,0
+B,scope-contact,What is the municipal phone contact channel?,POL-10,POL-10,True,True,0.122907,0.002306,0,0,0
+B,out-of-scope,Quantum entanglement particle measurement apparatus,,,True,True,0,0.001325,0,0,0

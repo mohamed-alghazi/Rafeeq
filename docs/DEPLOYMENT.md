@@ -2,7 +2,7 @@
 
 [Project overview](../README.md)
 
-`render.yaml` prepares this repository for a free Render web service. A hosting account and an inference key are required. No public service has been deployed from this workspace.
+`render.yaml` prepares this repository for a free Render web service. A hosting account is required. AI chat needs an inference key; public local policy search does not. No public service has been deployed from this workspace.
 
 ## Render setup
 
@@ -17,7 +17,7 @@ A tester needs the site address and the **site access code** (`RAFEEQ_ACCESS_TOK
 ## Tester flow
 
 1. Open the service and enter the site access code to start an isolated session.
-2. Public policy and fee questions need no identity verification.
+2. The public policy-search button works without an access code or inference key. AI chat requires the site access code and a configured provider key; public questions do not require applicant verification.
 3. For application actions, use the separate verification form. The intentionally public synthetic applicant is:
 
 | Field | Synthetic value |

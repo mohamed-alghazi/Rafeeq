@@ -1,0 +1,15 @@
+{
+  "captured_at": "2026-10-29T08:38:37.056523+00:00",
+  "capture": "real local browser, actual public policy-search endpoint; no mocked AI response",
+  "viewport": {
+    "width": 1280,
+    "height": 1100
+  },
+  "query": "كم رسوم اللوحة المضيئة؟",
+  "search_mode": "B",
+  "top_policy": "POL-02",
+  "http_status": 200,
+  "page_errors": [],
+  "credentials_entered": false,
+  "screenshot": "policy-search.png"
+}

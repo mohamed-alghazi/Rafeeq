@@ -45,3 +45,5 @@ This is a synthetic multi-session demo with two fixture applicant identities and
 `tests/test_features.py` checks credential normalisation, three-attempt lockout, verification expiry, owner-switch rejection, cross-session action denial, memory isolation/redaction, and concealed validation errors. It also covers refund amounts and finance gating, stale rescheduling, duplicate-action prevention, and verified escalation.
 
 Verification credentials are entered outside chat and stored as salted hashes. Conversation memory contains bounded redacted text, not raw verification fields or tool transcripts. Session-token hashes scope memory and action approvals. The shared code and public demo fixture credentials are not production authentication. Redaction is pattern-based and cannot guarantee removal of every possible sensitive detail.
+
+The public `/api/policies/search` endpoint serves only the fixed synthetic policy corpus. Its mode and query length are validated. Tests verify that it creates no inference client and grants no access to private application/proposal endpoints.
