@@ -12,7 +12,7 @@ Built for [Advanced Agentic AI Systems Engineering - SDAIA Academy](https://gith
 
 ## Getting started
 
-[Open Rafeeq](https://rafeeq-demo-pcbf.onrender.com/) and click **Start demo**. No account, access code or API key is required from visitors.
+[Open Rafeeq](https://rafeeq-demo-pcbf.onrender.com/) and click **Start demo**.
 
 1. Start a new demo session and ask a question, such as “What is the fee for a 3 m² illuminated sign?”
 2. For a direct policy lookup, use **Search policies**. This runs locally without an AI-provider request.
@@ -25,7 +25,7 @@ Built for [Advanced Agentic AI Systems Engineering - SDAIA Academy](https://gith
 | Last four ID digits | `0001` |
 | Mobile | `0550001001` |
 
-Each visitor has a separate conversation and pending approvals. Sample application records are shared fictional data. A visitor session does not provide access to the owner's hosting account, private API sessions or provider key.
+Each session has its own conversation and pending requests. The sample applications are fictional and may include actions from earlier demo visits.
 
 [Visitor guide and example requests](docs/USER_GUIDE.md)
 

@@ -10,7 +10,7 @@ Type a policy question and select **Search policies**. This searches the policy 
 
 ## Start an AI conversation
 
-Click **Start demo**. A new visitor session opens without an account, password or access code. It does not give access to the owner's private API sessions, hosting account or OpenRouter key.
+Click **Start demo**, write a question and select **Ask AI**.
 
 Ask “What is the fee for a 3 m² illuminated sign?” The expected amount is 750 SAR with source POL-02. Follow-up questions use the current session's conversation.
 
@@ -41,8 +41,8 @@ A proposed action appears in the approval section. Review the application, date 
 
 ## Sessions and shared sample data
 
-Conversations and pending approvals belong to the current session. Other visitors do not receive the session token. A new tab or refreshed page may require a new session because credentials and session tokens are not saved in browser storage.
+Your conversation and pending requests belong to the current session. After refreshing the page or opening a new tab, click **Start demo** to begin a new conversation.
 
 The fictional application records are shared, so an earlier visitor may already have created an inspection or refund. A duplicate-action rejection is expected in that case. Free-hosting restarts can reset all demo data.
 
-No manager dashboard or personal owner account is exposed to visitors. Use only the synthetic verification details; never supply a real identity number, real phone number, hosting password or API key.
+Use the fictional verification details listed above when trying application requests.
